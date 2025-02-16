@@ -276,12 +276,15 @@ export default function Main() {
 
   const objectiveRankings =
     <div className="objective-rankings">
+     <div className="resolutionMethodTitle"><strong>Rank Objectives</strong></div>
+
       <p>Please rank the following objectives based on the initial data collected so far. 1 is the objective you agree with the most. </p>
       {objectivesToRank}
     </div>
 
-  const objectiveRankingsUpdate =
+  const updateObjectiveRankings =
   <div className="objective-rankings">
+    <div className="objectiveRankingTitle"><strong>Update Objective Rankings</strong></div>
       <p>Your current ranking of the objectives is selected below. If you have changed the order in which you agree with each of the selected beliefs, please change below. (1 being the strongest agreement)</p>
       {objectivesToRank}
     </div>
@@ -368,7 +371,29 @@ const onObjectiveTextChange = e => {
       ))}
 
 
-          <p><i><strong>How much did the visual explanation provided for the robot's suggestions positively influence your decision to accept?</strong></i></p>
+          {/* <p><i><strong>How much did the visual explanation provided for the robot's suggestions positively influence your decision to accept?</strong></i></p>
+          <div className="slider-box">
+            <Box>
+              <Slider
+                aria-label="Restricted values"
+                value={acceptExplanationRating}
+                valueLabelFormat={valueLabelFormat}
+                valueLabelDisplay="auto"
+                step={20}
+                marks={explanationMarks}
+                onChange={(event, v) => {
+                  dispatch({ type: Action.SET_ACCEPT_EXPLANATION_RATING, value: v });
+
+                }}
+              />
+            </Box>
+          </div> */}
+        
+    </div>  
+
+    const explanationQuestion = 
+    <div>
+        <p><i><strong>How much did the visual explanation provided for the robot's suggestions positively influence your decision to accept?</strong></i></p>
           <div className="slider-box">
             <Box>
               <Slider
@@ -385,8 +410,8 @@ const onObjectiveTextChange = e => {
               />
             </Box>
           </div>
-        
-    </div>  
+    </div>
+    
 
 // Apply new changes by Zeyu 6/21/2022
   useEffect(() => {
@@ -458,12 +483,14 @@ const onObjectiveTextChange = e => {
   // const [updateButton, setUpdateButton] = useState(true);
   // function handleUpdateButton(e) {
   //   setUpdateButton(false);
+
   // }
 
   const updateResolutionMethod =
   <div className='update-resolution-method'>
      <div className="resolutionMethodtext">
         {/* //const prevMethod = resolutionTexts */}
+        <div className="resolutionMethodTitle"><strong>Update Resolution Method</strong></div>
         <p>Your current objective resolution method is selected below. If you wish to change it, please do so below:</p>
      </div>
     <RadioButtonGroup options={resolutionTexts} selectedIndex={resolutionMethod} onChange={i => {
@@ -500,14 +527,14 @@ const onObjectiveTextChange = e => {
       </div>
     </div>
 
-    <div className="objectiveRankingTitle"><strong>Update Objective Rankings</strong></div>
+    {/* <div className="objectiveRankingTitle"><strong>Update Objective Rankings</strong></div>
 
 
-    {objectiveRankingsUpdate}
+    {updateObjectiveRankings}
 
     <div className="resolutionMethodTitle"><strong>Update Resolution Method</strong></div>
 
-    {updateResolutionMethod}
+    {updateResolutionMethod} */}
 
   </div>
 
@@ -522,17 +549,43 @@ const onObjectiveTextChange = e => {
           }}/>
     </div>
 
+// {/* <div className="resolutionMethodtext">
+//         {/* //const prevMethod = resolutionTexts */}
+//         <div className="resolutionMethodTitle"><strong>Update Resolution Method</strong></div>
+//         <p>Your current objective resolution method is selected below. If you wish to change it, please do so below:</p>
+//      </div>
+//      */}
+
+const resMethod = 
+<div className='choose-resolution-method'>
+     <div className="resolutionMethodtext">
+        {/* //const prevMethod = resolutionTexts */}
+        <div className="resolutionMethodTitle"><strong>Choose Method for Resolving Objectives</strong></div>
+        <p>There are three possible ways to balance the objectives. Please only choose one:</p>
+     </div>
+    <RadioButtonGroup options={resolutionTexts} selectedIndex={resolutionMethod} onChange={i => {
+        dispatch({ type: Action.SET_RES_METHOD, value: i });
+        // onNextFreeResponse(i);
+        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+    }}/>
+  </div>
+    
+
   // Match the order of UserFeedbackStates in 'constants.ts'
   const userFeedbackStateMap = [
     objectiveQuestions,
     objectiveRankings,
+    resMethod,
     objectiveFreeResponseQuestion,
     acceptOrRejectQuestions,
     acceptFollowUpQuestions,
+    explanationQuestion,
     rejectReasonQuestions,
     rejectReasonFreeResponseQuestion,
     userLocationSelectionQuestion,
     updateHypothesisConfidence,
+    updateObjectiveRankings,
+    updateResolutionMethod,
     transitionQuestions,
   ]
 
@@ -599,9 +652,16 @@ const onObjectiveTextChange = e => {
           dispatch({ type: Action.SET_OBJECTIVES_FREE_RESPONSE, value: "" });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.OBJECTIVE_FREE_RESPONSE });
         } else {
-          dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RES_METHOD});
 
-          let robotResults = await calculateRobotSuggestions(samples, globalState, objectivesTemp);
+        }
+        console.log({globalState}); // for debugging
+        return;
+      }
+      case UserFeedbackState.RES_METHOD: {
+        dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
+
+          let robotResults = await calculateRobotSuggestions(samples, globalState, objectives); //TODO: the objectives argument was previously objectivesTemp (local scope), this might mess things up -- check if objectives is correct way to access the stored temp array from objectiveranking switch case
           const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
           dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
           dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
@@ -612,9 +672,7 @@ const onObjectiveTextChange = e => {
           dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: 0 });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
           dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
-        }
-        console.log({globalState}); // for debugging
-        return;
+          return;
       }
       case UserFeedbackState.OBJECTIVE_FREE_RESPONSE: {
         dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
@@ -642,8 +700,12 @@ const onObjectiveTextChange = e => {
         return;
       }
       case UserFeedbackState.ACCEPT_FOLLOW_UP: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.HYPOTHESIS_CONFIDENCE });
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.EXPLANATION_QUESTION});
         //dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true }); // Disable update hypothesis confidence button unless the user made a selection. by Zeyu 7/7/2022
+        return;
+      }
+      case UserFeedbackState.EXPLANATION_QUESTION: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.HYPOTHESIS_CONFIDENCE });
         return;
       }
       // Select the reason why the use reject their belefs
@@ -690,6 +752,16 @@ const onObjectiveTextChange = e => {
 
       // }
       case UserFeedbackState.HYPOTHESIS_CONFIDENCE: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
+        return;
+
+      }
+      case UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_RES_METHOD});
+        return;
+
+      }
+      case UserFeedbackState.UPDATE_RES_METHOD: {
         //LUCKY copied from case where transitionAdj is 0:
         dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
 
@@ -800,7 +872,7 @@ const onObjectiveTextChange = e => {
           </Button>
         </div>
         <br></br>
-        { userFeedbackState === 8 && (
+        { userFeedbackState === 12 && (
         <div className="quit">
           <Button className="quitButton" variant="contained" color="primary" onClick={onConcludeClick}>
             End Collection At Transect
@@ -839,8 +911,9 @@ const onObjectiveTextChange = e => {
       title={""}
       allowCancel={false}
       steps={[
-        ["RHex will always take 3 measurements of moisture and strength at each location visited.",
-        "The dune cross-section on the right displays the locations where RHex has already sampled and the charts on the left display the corresponding data.",
+        [
+          "RHex will always take 3 measurements of moisture and strength at each location visited.",
+        "Top-right displays the dune cross-section with previously sampled locations with explanations underneath. The top-left displays corresponding data",
         "You will be asked a few questions to determine where RHex should sample next.",
         "If at any point you feel you have collected enough data to make a judgment about the hypothesis, select \"End Collection at Transect.\""
         ]

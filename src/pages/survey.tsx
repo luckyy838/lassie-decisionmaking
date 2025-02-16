@@ -399,9 +399,9 @@ export default function Survey() {
             {!(page >= surveyQuestions.length - 2) &&
                 <div className="buttonRow">
                     <Button disabled={page === 0} className="backButton" color="primary" variant="contained" onClick={onBackClick}>Back</Button>
-                    <Button disabled={!allQuestionsAnswered(answers, surveyQuestions[page])} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Continue</Button>
+                    <Button disabled={false} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Continue</Button>
                 </div>
             }
         </div>
-    );
+    ); //TODO: redisable the continue button above, same as line 396
 }

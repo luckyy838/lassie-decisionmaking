@@ -199,9 +199,9 @@ export const confidenceTexts = [
 ];
 
 export const resolutionTexts = [
-  'One-at-a-time',
-  'Even weighting',
-  'Weighted hierarchy'
+  'One-at-a-time: choose a location that optimizes the primary objective without considering the secondary objective',
+  'Even weighting: choose a location that addresses both the primary and secondary objective but optimizes neither',
+  'Hierarchical:  determine locations that optimize the primary objective and from these choose a location that best addresses the secondary objective'
 ]
 
 export const experimentTitles = {
@@ -747,13 +747,17 @@ export const robotTrustOptions = ["Not at all", "Low", "Slightly", "Neutral", "M
 export enum UserFeedbackState {
   OBJECTIVE,
   RANK_OBJECTIVES,
+  RES_METHOD,
   OBJECTIVE_FREE_RESPONSE,
   ACCEPT_OR_REJECT_SUGGESTION,
   ACCEPT_FOLLOW_UP,
+  EXPLANATION_QUESTION,
   REJECT_REASON,
   REJECT_REASON_FREE_RESPONSE,
   USER_LOCATION_SELECTION, //TODO: remove this?
   HYPOTHESIS_CONFIDENCE,
+  UPDATE_OBJECTIVE_RANKINGS,
+  UPDATE_RES_METHOD,
   TRANSITION,
 };
 
