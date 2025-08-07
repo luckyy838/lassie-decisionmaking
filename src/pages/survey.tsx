@@ -122,7 +122,7 @@ const continuousImageComponent = (question: SurveyQuestion, depth: number) => {
     )
 }
 //Add dropDown menu by Zeyu 6/16/2022
-const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesis.png');
+const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
 // const [hypothesisOpen, setHypothesisOpen] = useState(false);
 const decisionHypothesisDialog =
     <MultiStepDialog

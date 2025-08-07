@@ -150,6 +150,11 @@ export const surveyQuestions: SurveyQuestion[][] = [
             responses: ["Highly preferred", "Preferred", "Somewhat preferred", "Not preferred", 
                 "Strongly not preferred"]
         },
+        
+        {
+            type: QuestionType.Text,
+            text: "Describe why you prefer this explanation format."
+        },
         {
             type: QuestionType.MultipleChoice,
             text: "If the robot collected data autonomously using its own suggestions without providing explanations, how satisfied would you be with the resulting data collection strategy?",
@@ -163,41 +168,41 @@ export const surveyQuestions: SurveyQuestion[][] = [
             "Somewhat not confident", "Not confident", "Very not confident"]
         },
     ],
-    [
-        {
-            type: QuestionType.Instruction,
-            text: "Rank the extent to which you agree/disagree with the following statement:"
-        },
-        // {
-        //     type: QuestionType.MultipleChoiceHorizontal,
-        //     text: "The robot's suggestions were useful <u>when my reported belief was to increase spatial coverage</u>.",
-        //     responses: robotAgreeDisagreeOptions
-        // },
-        // {
-        //     type: QuestionType.MultipleChoiceHorizontal,
-        //     text: "The robot's  suggestions were useful <u>when my reported belief was to increase moisture-range coverage</u>.",
-        //     responses: robotAgreeDisagreeOptions
-        // },
-        // {
-        //     type: QuestionType.MultipleChoiceHorizontal,
-        //     text: "The robot's suggestions were useful <u>when my reported belief was that there was a discrepancy between the data and hypothesis that needed further evaluation</u>.",
-        //     responses: robotAgreeDisagreeOptions
-        // },
-        // {
-        //     type: QuestionType.MultipleChoiceHorizontal,
-        //     text: "The robot's suggestions were useful <u>when my reported belief was the the data was supporting the hypothesis but additional evaluation was needed</u>.",
-        //     responses: robotAgreeDisagreeOptions
-        // },
-        {
-            type: QuestionType.MultipleChoiceHorizontal,
-            text: "The robot's suggestions were <b>NOT</b> useful.",
-            responses: robotAgreeDisagreeOptions
-        },
-        {
-            type: QuestionType.Text,
-            text: "If you were to use this robot for data collection in real life, what changes or improvements would you make to the explanations to make it more likely to use the explanations in the field?",
-        }
-    ],
+    // [
+    //     {
+    //         type: QuestionType.Instruction,
+    //         text: "Rank the extent to which you agree/disagree with the following statement:"
+    //     },
+    //     // {
+    //     //     type: QuestionType.MultipleChoiceHorizontal,
+    //     //     text: "The robot's suggestions were useful <u>when my reported belief was to increase spatial coverage</u>.",
+    //     //     responses: robotAgreeDisagreeOptions
+    //     // },
+    //     // {
+    //     //     type: QuestionType.MultipleChoiceHorizontal,
+    //     //     text: "The robot's  suggestions were useful <u>when my reported belief was to increase moisture-range coverage</u>.",
+    //     //     responses: robotAgreeDisagreeOptions
+    //     // },
+    //     // {
+    //     //     type: QuestionType.MultipleChoiceHorizontal,
+    //     //     text: "The robot's suggestions were useful <u>when my reported belief was that there was a discrepancy between the data and hypothesis that needed further evaluation</u>.",
+    //     //     responses: robotAgreeDisagreeOptions
+    //     // },
+    //     // {
+    //     //     type: QuestionType.MultipleChoiceHorizontal,
+    //     //     text: "The robot's suggestions were useful <u>when my reported belief was the the data was supporting the hypothesis but additional evaluation was needed</u>.",
+    //     //     responses: robotAgreeDisagreeOptions
+    //     // },
+    //     {
+    //         type: QuestionType.MultipleChoiceHorizontal,
+    //         text: "The robot's suggestions were <b>NOT</b> useful.",
+    //         responses: robotAgreeDisagreeOptions
+    //     },
+    //     {
+    //         type: QuestionType.Text,
+    //         text: "If you were to use this robot for data collection in real life, what changes or improvements would you make to the explanations to make it more likely to use the explanations in the field?",
+    //     }
+    // ],
     [
         {
             type: QuestionType.Instruction,

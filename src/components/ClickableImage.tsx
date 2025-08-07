@@ -9,7 +9,7 @@ import AddSamplePopup from './AddSamplePopup';
 import PositionIndicator from './PositionIndicator';
 import PositionIndicatorRhex from './PositionIndicatorRhex';
 
-const diagram = require('../../assets/diagram_scalebar.png');
+const diagram = require('../../assets/picture1.png');
 
 const useStyles = makeStyles({
   cross: {

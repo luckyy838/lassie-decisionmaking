@@ -11,7 +11,7 @@ interface ConsentPanelProps {
     onCompletion: () => void
 }
 
-const consentPdf = require('../../assets/IRB_Consent_Expert_MultiTransect.pdf');
+const consentPdf = require('../../assets/LASSIE Web-Based Scenario Consent.pdf');
 
 const useStyles = makeStyles({
     container: {

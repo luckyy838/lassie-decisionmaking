@@ -21,7 +21,8 @@ import FormLabel from '@material-ui/core/FormLabel';
 import { styled } from '@material-ui/core/styles';
 import { isNumber } from "lodash";
 const robotDesertGif = require('../../assets/robot_desert_horizontal.gif');
-const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesis.png');
+const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
+const competingLocalHypo = require('../../assets/CompetingLocalHypo.png');
 
 const CustomFormControlLabel = styled(FormControlLabel)({
     '& .MuiFormControlLabel-label': {
@@ -227,8 +228,6 @@ export default function Intro(props) {
                         <p>
                             The mobile hexapod robot RHex needs your help testing a hypothesis about the relationship 
                             between sand strength and moisture at White Sands National Monument in New Mexico.
-                        </p>
-                        <p>
                             RHex has already collected some strength and moisture data at a dune. Strength was measured 
                             by mechanical resistance to shear (dragging) during robot leg-soil interactions and moisture 
                             was measured using a probe attached to the robot.

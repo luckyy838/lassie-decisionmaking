@@ -241,6 +241,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     return suggestion;
   });
 
+  console.log("logging from calculateRobotSuggestions");
   console.log({locations, measurements, moistureValues, shearValues, robotSuggestions, results});
   
   return {

@@ -5,8 +5,10 @@ import { explanationChartOption } from '../constants';
 
 export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     const { explanationChartSettings, currUserStep } = globalState;
-    const { variableReward, discrepancyReward, robotSuggestions} = currUserStep;
+    const { variableReward, spatialReward, discrepancyReward, robotSuggestions} = currUserStep;
 
+    console.log(robotSuggestions);
+    console.log("robotSuggestions");
     let { explanationChart } = globalState;
   
     if (!explanationChart) return;
@@ -51,10 +53,14 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     console.log("update chart called");
   
     if (explanationChart) {
-      console.log(variableReward);
-      console.log("logged var reward");
+      console.log(spatialReward);
+      console.log("logged spatial reward");
+      console.log(currUserStep);
       //spatial
-      explanationChart.data.datasets[0].data = [
+      explanationChart.data.datasets[0].data = 
+
+
+      [
         { x: 0, y: 0.7429797155009306 },
         { x: 1, y: 0.43861608620107184 },
         { x: 2, y: 0.7429797155009306 },
@@ -78,7 +84,7 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
         { x: 20, y: 0.742979715500588 },
         { x: 21, y: 0.9753345122421678 }
     ];
-    //discrepancy - green
+   // discrepancy - green
     explanationChart.data.datasets[1].data = [
         { x: 0, y: 0.3154091199969593 },
         { x: 1, y: 0.2838104103438007 },

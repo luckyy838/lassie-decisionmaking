@@ -56,6 +56,7 @@ export interface IState {
   explanationChartSettings: ExplanationChartSettings
   // Miscellaneous fields
   transectIdx: number, // single transect version (setting transect index to 0 by default)
+  userSamples: Sample[],
   loadingRobotSuggestions: boolean,
   showRobotSuggestions: boolean,
   lastHoverIdx: number,
@@ -127,6 +128,7 @@ export const initialState : IState = {
     updateRequired: false
   },
   transectIdx: 0, 
+  userSamples: [],
   loadingRobotSuggestions: false,
   showRobotSuggestions: false,
   lastHoverIdx: -1,
@@ -186,6 +188,7 @@ export enum Action {
     SET_FINAL_HYPO_CONFIDENCE,
     SET_CONCLUSION_FREE_RESPONSE,
     SET_INITIAL_RESOLUTION_METHOD,
+    SET_SELECTED_POINT_FROM_CHART,
     SET_CHART,
     SET_CHART_SETTINGS,
     SET_EXPLANATION_CHART,

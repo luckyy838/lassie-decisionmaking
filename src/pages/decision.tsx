@@ -63,6 +63,34 @@ export default function Main() {
 
   const history = useHistory();
 
+  //TODO: following code used to override all tutorial edits
+  // useEffect(() => {
+  //   console.log("Initial userFeedbackState:", userFeedbackState);
+    
+  //   if (userFeedbackState === 1) {  // Check if it's the unintended default
+  //     dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: 5 }); // Set it to your intended start step
+  //     console.log("Forced userFeedbackState to 1");
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    if (userFeedbackState === UserFeedbackState.OBJECTIVE) {
+      dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL1 });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (
+      userFeedbackState === UserFeedbackState.TUTORIAL1 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL2 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL3 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL4
+    ) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+    }
+  }, [userFeedbackState]);
+  
+  
   // Initial page set up
   useEffect(() => {
     console.log({globalState}); // for debugging
@@ -154,6 +182,7 @@ export default function Main() {
     }
   }, [objectives]);
 
+  
   // In the RANK_OBJECTIVES step, automatically disable the submit button until the user fills out a valid set of rankings for each selected objective
   // Example of set two group of user input buttons 6/12/2022
   useEffect(() => {
@@ -276,7 +305,7 @@ export default function Main() {
 
   const objectiveRankings =
     <div className="objective-rankings">
-     <div className="resolutionMethodTitle"><strong>Rank Objectives</strong></div>
+     <div className="resolutionMethodTitle"><strong>Prioritize Objectives</strong></div>
 
       <p>Please rank the following objectives based on the initial data collected so far. 1 is the objective you agree with the most. </p>
       {objectivesToRank}
@@ -465,7 +494,7 @@ const onObjectiveTextChange = e => {
 
   // Hook for displaying hypothesis popup
   // Apply new changes 6/7/2022 by Zeyu
-  const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesis.png');
+  const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
   const [hypothesisOpen, setHypothesisOpen] = useState(false);
   const decisionHypothesisDialog =
     <MultiStepDialog
@@ -570,10 +599,39 @@ const resMethod =
     }}/>
   </div>
     
+    const tutorial2 = 
+    <div className = 'tutorial2'>
+      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
+    </div>
+
+const tutorial3 = 
+<div className = 'tutorial3'>
+  <p>Just below the dune cross-section is a graphical explanation of the suggested locations from RHex. Uncertainty is on the Y-axis and location along the dune transect is on the X-axis. Suggested locations are meant to resolve areas of high uncertainty based on two objectives: information coverage (purple) and hypothesis evaluation (green).
+  </p>
+</div>
+
+const tutorial1 = 
+<div className = 'tutorial1'>
+  <p>Data collected by RHex at the previously visited locations is plotted in the top left corner. Shear strength is on the Y-axis and moisture percentage is on the X-axis. RHex will always take 3 measurements at each location visited. Note that the color of the plotted data points corresponds to the color of the locations displayed on the dune cross-section.
+  </p>
+</div>
+
+const tutorial4 = 
+<div className = 'tutorial4'>
+  <p>You will evaluate the collected data against the <span style={{color: 'blue', textDecorationLine: 'underline', cursor: 'pointer'}}><strong><a onClick={() => setHypothesisOpen(true)}>hypothesis</a></strong></span>. 
+  </p>
+  <p>Once you feel you have collected enough data to evaluate the hypothesis, select the “End Collection at Transect” button. This button will appear after you have collected your first sample.
+  </p>
+</div>
 
   // Match the order of UserFeedbackStates in 'constants.ts'
   const userFeedbackStateMap = [
     objectiveQuestions,
+    tutorial1,
+    tutorial2,
+    tutorial3,
+    tutorial4,
+
     objectiveRankings,
     resMethod,
     objectiveFreeResponseQuestion,
@@ -602,6 +660,23 @@ const resMethod =
   const onSubmit = async () => {
     dispatch({ type: Action.SET_NUM_SUBMIT_CLICKS, value: numSubmitClicks + 1 });
     switch (userFeedbackState) {
+      case UserFeedbackState.TUTORIAL1: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL2 });
+        return;
+      }
+      case UserFeedbackState.TUTORIAL2: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL3 });
+        return;
+      }
+      case UserFeedbackState.TUTORIAL3: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL4 });
+        return;
+      }
+      case UserFeedbackState.TUTORIAL4: {
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
+        return;
+      }
+      
       case UserFeedbackState.OBJECTIVE: {
         if (objectives.length === 1) {
 
@@ -618,11 +693,16 @@ const resMethod =
             dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
 
             let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
+        
             const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
             dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
             dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
             dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
             dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
+            console.log(globalState);
+            console.log("logged global state from decision");
+            console.log(spatialReward);
+            console.log("logged spatial reward from decision")
 
             dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
             dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
@@ -856,14 +936,18 @@ const resMethod =
     <div className="collectionRightPanel">
       <ImgAlert open={!!showImgAlert} />
       <Tooltip title={userFeedbackState !== UserFeedbackState.USER_LOCATION_SELECTION ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
-          <div className="clickableImageContainer">
+      <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
             <ClickableImage width={750} enabled={imgClickEnabled} addDataFunc={() => addDataToPlot()} setPopOver={setImgAlert} />  
           </div>
       </Tooltip>
       {/* <div>
         <BarChart isBarMode = {true}/>
       </div> */}
+      <div className={`explanationPanel`}>
       <ExplanationPanel/>
+      </div>
+      
+
       {!loadingRobotSuggestions && <div className={numSubmitClicks === 0 ? "user-feedback-flashing" : "user-feedback"}>
         {userFeedbackStateMap[userFeedbackState]}
         <div className="submit-user-feedback-button">
@@ -872,7 +956,7 @@ const resMethod =
           </Button>
         </div>
         <br></br>
-        { userFeedbackState === 12 && (
+        { (userFeedbackState === 16 || userFeedbackState === 15 || userFeedbackState === 14)  && (
         <div className="quit">
           <Button className="quitButton" variant="contained" color="primary" onClick={onConcludeClick}>
             End Collection At Transect
@@ -912,10 +996,10 @@ const resMethod =
       allowCancel={false}
       steps={[
         [
-          "RHex will always take 3 measurements of moisture and strength at each location visited.",
-        "Top-right displays the dune cross-section with previously sampled locations with explanations underneath. The top-left displays corresponding data",
-        "You will be asked a few questions to determine where RHex should sample next.",
-        "If at any point you feel you have collected enough data to make a judgment about the hypothesis, select \"End Collection at Transect.\""
+          "Before starting data collection, familiarize yourself with the features of the interface.",
+        // "Top-right displays the dune cross-section with previously sampled locations with explanations underneath. The top-left displays corresponding data",
+        // "You will be asked a few questions to determine where RHex should sample next.",
+        // "If at any point you feel you have collected enough data to make a judgment about the hypothesis, select \"End Collection at Transect.\""
         ]
       ]}
     />;
@@ -929,7 +1013,8 @@ const resMethod =
       <div style={{
         position: 'fixed',
         bottom: 20,
-        right: 40
+        right: 40,
+        display: 'none'
       }}>
         <HelpIcon
           id="helper"
@@ -946,6 +1031,22 @@ const resMethod =
       { helperOpen && <Helper /> }
       { decisionHypothesisDialog }
       { decisionHelpDialog }
+
+      {userFeedbackState === UserFeedbackState.TUTORIAL1 && (
+  <div className="tutorial-arrow" style={{ transform: 'rotate(225deg)' }} />  
+)}
+ {userFeedbackState === UserFeedbackState.TUTORIAL3 && (
+          <div className="tutorial-arrow2"/>
+        )}
+
+
+{/* 
+{userFeedbackState === UserFeedbackState.TUTORIAL1 && (
+  <div className="tutorial-arrow">
+    <div className="arrow-stem" />
+    <div className="arrow-head" />
+  </div>
+)} */}
 
       <ConfirmDialog
         open={confirmConcludeOpen}
@@ -965,7 +1066,11 @@ const resMethod =
             <ChartPanel fullSize={true} mode={"TransectView"}/>
           </Grid>
           <Grid item xs={12} md={6} className="rightDecisionPanel">
-            <div className="rightDecisionPanelContainer">
+          <div
+          className={`rightDecisionPanelContainer ${
+            userFeedbackState === UserFeedbackState.TUTORIAL3 ? 'rightDecisionPanelContainer-flashing' : ''
+               }`}
+            >
               { collectionRightPanel }
             </div>
             

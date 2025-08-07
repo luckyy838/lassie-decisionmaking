@@ -248,125 +248,225 @@ export const PopboxTypeEnum = {
   ERROR: 'error'
 };
 
+// export const explanationChartOption = {
+//   type: 'line',
+//   data: {
+//     labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '','','','','','','',''],
+//     datasets: [
+//       {
+//         label: 'Primary objective',
+//         yAxisID: 'reward',
+//         data: [0.25, 0.59, 0.9],
+//         tension:0.3,
+//         borderColor: 'rgba(128, 0, 128, 1)',
+//         fill: false
+//       },
+//       {
+//         label: 'Secondary objective',
+//         yAxisID: 'reward',
+//         data: [],
+//        tension: 0.3,
+//         borderColor: 'rgba(0, 128, 0, 1)',
+//         fill: false
+//       }
+//     ]
+//   },
+//   options: {
+//       title: {
+//         display: true,
+//         text: "Reward Value for Each Objective Across Transect",
+//         fontStyle: "bold"
+//       },
+//       // responsive: true,
+//       maintainAspectRatio: true,
+//       chartArea: { backgroundColor: '#FFF' },
+//       legend: { display: false },
+//       elements: {
+//         point: {
+//           radius: 0.1,
+//           hoverRadius: 6,
+//           borderWidth: 0,
+//           hoverBorderWidth: 0
+//         },
+//         line: {
+//           tension: 0.3
+//         }
+//       },
+//       // Disable all animations
+//       animation: {
+//         duration: 0
+//       },
+//       hover: {
+//         animationDuration: 0
+//       },
+//       onHover: null as any,
+//       responsiveAnimationDuration: 0,
+//       scales: {
+//           yAxes: [{
+//             position: 'left',
+//             id: 'reward',
+//             scaleLabel: {
+//               display: true,
+//               labelString: 'Reward Value'
+//             },
+//             ticks: {
+//               min: 0,
+//               max: 1.1,
+//               stepSize: 0.1
+//             }
+//           }],
+          
+//           xAxes:    [{
+//             type: 'linear',
+//             position: 'bottom',
+//             scaleLabel: {
+//               display: true,
+//               labelString: 'Transect'
+//             },
+//             ticks: {
+//               display: false,  
+//               min: 0,
+//               max: 21,
+//               stepSize: 1
+//             }
+//         }]
+
+
+
+
+
+
+
+
+// // [{
+// //             type: 'category',
+// //             barPercentage: 0.5,
+// //             barThickness: 6,
+// //             maxBarThickness: 8,
+// //             minBarLength: 2,
+// //             gridLines: {
+// //                 offsetGridLines: true
+// //             },
+// //             ticks: {
+// //               min: 0,
+// //               max: 21,
+// //               stepSize: 1
+// //             }
+// //         }]
+       
+//       },
+//     //   tooltips: {
+//     //     callbacks: {
+//     //         label: function(tooltipItem, data) {
+//     //           const { datasetIndex, index } = tooltipItem;
+//     //           const rawData = data.datasets[datasetIndex].data[index];
+//     //           const { x, y, rowIndex } = rawData;
+//     //           return `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+//     //         }
+//     //     }
+//     // }
+//   }
+// };
 export const explanationChartOption = {
   type: 'line',
   data: {
     labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '','','','','','','',''],
     datasets: [
       {
-        label: 'Primary objective',
+        label: 'Coverage',
         yAxisID: 'reward',
-        data: [0.25, 0.59, 0.9],
-        tension:0.3,
-        borderColor: 'rgba(128, 0, 128, 1)',
+        data: [],
+        tension: 0.3,
+        borderColor: 'rgba(128, 0, 128, 1)', // Purple
+        backgroundColor: 'rgba(128, 0, 128, 0.2)',
         fill: false
       },
       {
-        label: 'Secondary objective',
+        label: 'Hypothesis',
         yAxisID: 'reward',
         data: [],
-       tension: 0.3,
-        borderColor: 'rgba(0, 128, 0, 1)',
+        tension: 0.3,
+        borderColor: 'rgba(0, 128, 0, 1)', // Green
+        backgroundColor: 'rgba(0, 128, 0, 0.2)',
         fill: false
       }
     ]
   },
   options: {
-      title: {
-        display: true,
-        text: "Reward Value for Each Objective Across Transect",
-        fontStyle: "bold"
-      },
-      // responsive: true,
-      maintainAspectRatio: true,
-      chartArea: { backgroundColor: '#FFF' },
-      legend: { display: false },
-      elements: {
-        point: {
-          radius: 0.1,
-          hoverRadius: 6,
-          borderWidth: 0,
-          hoverBorderWidth: 0
-        },
-        line: {
-          tension: 0.3
+    title: {
+      display: true,
+      text: "Reward Value for Each Objective Across Transect",
+      fontStyle: "bold"
+    },
+    maintainAspectRatio: true,
+    chartArea: { backgroundColor: '#FFF' },
+    
+    // ✅ Enable and customize the legend
+    plugins: {
+      legend: {
+        display: true, // Enable legend
+        position: 'top', // 'top', 'bottom', 'left', or 'right'
+        labels: {
+          color: 'black', // Legend text color
+          font: {
+            size: 14 // Legend font size
+          },
+          usePointStyle: true, // Make legend markers circles instead of rectangles
+          boxWidth: 20 // Size of color box in legend
         }
+      }
+    },
+
+    elements: {
+      point: {
+        radius: 0, // Visible points
+        hoverRadius: 6,
+        borderWidth: 2,
+        hoverBorderWidth: 2
       },
-      // Disable all animations
-      animation: {
-        duration: 0
-      },
-      hover: {
-        animationDuration: 0
-      },
-      onHover: null as any,
-      responsiveAnimationDuration: 0,
-      scales: {
-          yAxes: [{
-            position: 'left',
-            id: 'reward',
-            scaleLabel: {
-              display: true,
-              labelString: 'Reward Value'
-            },
-            ticks: {
-              min: 0,
-              max: 1.1,
-              stepSize: 0.1
-            }
-          }],
-          
-          xAxes:    [{
-            type: 'linear',
-            position: 'bottom',
-            scaleLabel: {
-              display: true,
-              labelString: 'Transect'
-            },
-            ticks: {
-              display: false,  
-              min: 0,
-              max: 21,
-              stepSize: 1
-            }
-        }]
+      line: {
+        tension: 0.3
+      }
+    },
 
+    // Disable animations for immediate updates
+    animation: { duration: 0 },
+    hover: { animationDuration: 0 },
+    responsiveAnimationDuration: 0,
 
-
-
-
-
-
-
-// [{
-//             type: 'category',
-//             barPercentage: 0.5,
-//             barThickness: 6,
-//             maxBarThickness: 8,
-//             minBarLength: 2,
-//             gridLines: {
-//                 offsetGridLines: true
-//             },
-//             ticks: {
-//               min: 0,
-//               max: 21,
-//               stepSize: 1
-//             }
-//         }]
-       
-      },
-    //   tooltips: {
-    //     callbacks: {
-    //         label: function(tooltipItem, data) {
-    //           const { datasetIndex, index } = tooltipItem;
-    //           const rawData = data.datasets[datasetIndex].data[index];
-    //           const { x, y, rowIndex } = rawData;
-    //           return `(${x.toFixed(2)}, ${y.toFixed(2)})`;
-    //         }
-    //     }
-    // }
+    scales: {
+      yAxes: [{
+        position: 'left',
+        id: 'reward',
+        scaleLabel: {
+          display: true,
+          labelString: 'Reward Value'
+        },
+        ticks: {
+          min: 0,
+          max: 1.1,
+          stepSize: 0.1
+        }
+      }],
+      
+      xAxes: [{
+        type: 'linear',
+        position: 'bottom',
+        scaleLabel: {
+          display: true,
+          labelString: 'Transect'
+        },
+        ticks: {
+          display: false,
+          min: 0,
+          max: 21,
+          stepSize: 1
+        }
+      }]
+    }
   }
 };
+
 
 export const shearChartOption = {
   type: 'scatter',
@@ -533,13 +633,14 @@ export const moistChartOption = {
 };
 
 export const shearMoistChartOption = {
-  type: 'line',
+  type: 'scatter',
   data: {
     datasets: [
       {
         label: 'Moisture',
         yAxisID: 'moisture',
-        data: []
+        data: [],
+        fill: false
       }
     ]
   },
@@ -746,6 +847,10 @@ export const robotTrustOptions = ["Not at all", "Low", "Slightly", "Neutral", "M
 
 export enum UserFeedbackState {
   OBJECTIVE,
+  TUTORIAL1,
+  TUTORIAL2,
+  TUTORIAL3,
+  TUTORIAL4,
   RANK_OBJECTIVES,
   RES_METHOD,
   OBJECTIVE_FREE_RESPONSE,
@@ -762,9 +867,9 @@ export enum UserFeedbackState {
 };
 
 export const objectiveOptions = [
-  "INFO COVERAGE There are areas along the dune transect (between crest and interdune) where data is needed", // Option 0 - spatial coverage algorithm
+  " COVERAGE There are areas where data are missing ", // Option 0 - spatial coverage algorithm
   //"There are portions of the dynamic range of the moisture variable (x axis of the data plot) where data is needed", // Option 1 old - variable coverage algorithm
-  "DISCREPANCY There is either a discrepancy or a correlation between the data and the hypothesis that needs additional evaluation", // Option 1 - hypo invalidating algorithm -- changed to general hypothesis evaluation
+  "HYPOTHESIS There are areas that require more data to evaluate the hypothesis", // Option 1 - hypo invalidating algorithm -- changed to general hypothesis evaluation
   //"The data seems to be supporting the hypothesis so far but additional evaluation is needed", // Option 3 old - hypo validating algorithm
   // "I hold a different belief that is not described here" // Option 2 - free response
 ]

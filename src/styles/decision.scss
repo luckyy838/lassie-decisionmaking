@@ -325,11 +325,19 @@
                 box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.3);
                 animation: flashingOutline 2s infinite ease-in-out;
 
+
                 .submit-user-feedback-button {
                     display: flex;
                     justify-content: center;
                 }
             }
+
+            .rightDecisionPanelContainer-flashing {
+                animation: flashingOutline 2s infinite ease-in-out;
+                outline: 3px solid red;
+                outline-offset: -3px;
+              }
+              
 
             @keyframes flashingOutline {
                 0%	    { outline: solid; outline-color: #10c018;}
@@ -390,3 +398,89 @@
         }
     }
 }
+.flashing-red-border {
+    border: 3px solid red;
+    animation: flashingOutline 2s infinite ease-in-out;
+    border-radius: 10px;
+  }
+
+//   .tutorial-arrow {
+//     position: fixed;
+//     top: 10px;
+//     left: 210px;
+//     z-index: 9999;
+//     width: 300px;
+//     height: 50px;
+//     border: 4px solid red;
+//     border-radius: 50%;
+//     background-color: transparent;
+//     animation: arrowPulse 1s infinite;
+//     pointer-events: none;
+
+    // &::before {
+    //   content: '';
+    //   display: block;
+    //   width: 0;
+    //   height: 0;
+    //   border-left: 20px solid transparent;
+    //   border-right: 20px solid transparent;
+    //   border-bottom: 30px solid red;
+    //   animation: arrowPulse 1s infinite;
+    // }
+  //}
+  
+  @keyframes arrowPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  
+.tutorial-arrow {
+    position: fixed;
+    top: 10px;
+    left: 210px;
+    z-index: 9999;
+    width: 300px;
+    height: 50px;
+    border: 4px solid red;
+    border-radius: 50%;
+    background-color: transparent;
+    animation: arrowPulse 1s infinite;
+    pointer-events: none;
+
+    // &::before {
+    //   content: '';
+    //   display: block;
+    //   width: 0;
+    //   height: 0;
+    //   border-left: 20px solid transparent;
+    //   border-right: 20px solid transparent;
+    //   border-bottom: 30px solid red;
+    //   animation: arrowPulse 1s infinite;
+    // }
+  }
+
+  .tutorial-arrow2 {
+    position: fixed;
+    top: 210px;
+    left: 900px;
+    z-index: 9999;
+    width: 350px;
+    height: 50px;
+    border: 4px solid red;
+    border-radius: 50%;
+    background-color: transparent;
+    animation: arrowPulse 1s infinite;
+    pointer-events: none;
+
+    // &::before {
+    //   content: '';
+    //   display: block;
+    //   width: 0;
+    //   height: 0;
+    //   border-left: 20px solid transparent;
+    //   border-right: 20px solid transparent;
+    //   border-bottom: 30px solid red;
+    //   animation: arrowPulse 1s infinite;
+    // }
+  }
