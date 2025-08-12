@@ -693,12 +693,15 @@ const tutorial4 =
             dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
 
             let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
-        
+            
             const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
+            console.log("logged spatial reward from decision at objective case where it's not free response");
+            console.log(spatialReward);
             dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
             dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
             dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
             dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
+            console.log("testing");
             console.log(globalState);
             console.log("logged global state from decision");
             console.log(spatialReward);
@@ -714,6 +717,7 @@ const tutorial4 =
           dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         } 
+        console.log("logging ");
         console.log({globalState}); // for debugging
         return;
       }
@@ -742,13 +746,20 @@ const tutorial4 =
         dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
 
           let robotResults = await calculateRobotSuggestions(samples, globalState, objectives); //TODO: the objectives argument was previously objectivesTemp (local scope), this might mess things up -- check if objectives is correct way to access the stored temp array from objectiveranking switch case
+         
           const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
+           console.log("logging state from resolution method");
+          console.log(globalState);
+          console.log("logging spatial reward from resolution method");
+          console.log(spatialReward);
           dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
           dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
           dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
           dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
 
           dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
+          dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
+
           dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: 0 });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
           dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
@@ -847,6 +858,11 @@ const tutorial4 =
 
           let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
           const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
+          console.log("logging state from update resolution method");
+          console.log(globalState);
+          console.log("logging spatial reward from update resolution method");
+          console.log(spatialReward)
+
           dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
           dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
           dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
@@ -857,6 +873,7 @@ const tutorial4 =
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
           dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
           //dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+          dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
 
           //LUCKY all done if not 3 (in all cases except quitting):
           dispatch({ type: Action.SET_USER_STEP_IDX, value: step + 1});

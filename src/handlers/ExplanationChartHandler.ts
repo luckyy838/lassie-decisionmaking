@@ -8,7 +8,7 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     const { variableReward, spatialReward, discrepancyReward, robotSuggestions} = currUserStep;
 
     console.log(robotSuggestions);
-    console.log("robotSuggestions");
+    console.log("robotSuggestions from explanation chart ");
     let { explanationChart } = globalState;
   
     if (!explanationChart) return;
@@ -50,40 +50,46 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     //     pushChartArrayValue(shearMoistureDataPoints, averageMoistureValue, averageShearValue, rowIndex, currSampleIdx, index);
     //   }
     // }
-    console.log("update chart called");
+    console.log("update explanation chart called");
   
     if (explanationChart) {
       console.log(spatialReward);
-      console.log("logged spatial reward");
+      console.log("logged spatial reward from explanation chart");
       console.log(currUserStep);
       //spatial
-      explanationChart.data.datasets[0].data = 
+      const spatialRewardFormat = spatialReward.map((j,i) => ({x:i, y:j}));
+      console.log("formatted spatial reward" + spatialRewardFormat);
+
+      explanationChart.data.datasets[0].data = spatialRewardFormat;
+      
+      
+     
 
 
-      [
-        { x: 0, y: 0.7429797155009306 },
-        { x: 1, y: 0.43861608620107184 },
-        { x: 2, y: 0.7429797155009306 },
-        { x: 3, y: 0.9753345122421678 },
-        { x: 4, y: 0.9995038341283518 },
-        { x: 5, y: 0.9999979060678188 },
-        { x: 6, y: 0.9999979060678188 },
-        { x: 7, y: 0.9995038341283518 },
-        { x: 8, y: 0.9753345122418252 },
-        { x: 9, y: 0.7429797136518924 },
-        { x: 10, y: 0.4386139941179287 },
-        { x: 11, y: 0.7424835496296249 },
-        { x: 12, y: 0.9506690244843357 },
-        { x: 13, y: 0.7424835496292823 },
-        { x: 14, y: 0.43861399226889053 },
-        { x: 15, y: 0.7429776215687494 },
-        { x: 16, y: 0.9748383463705196 },
-        { x: 17, y: 0.9748383463708622 },
-        { x: 18, y: 0.7429776234177874 },
-        { x: 19, y: 0.4386160843520337 },
-        { x: 20, y: 0.742979715500588 },
-        { x: 21, y: 0.9753345122421678 }
-    ];
+    //   [
+    //     { x: 0, y: 0.7429797155009306 },
+    //     { x: 1, y: 0.43861608620107184 },
+    //     { x: 2, y: 0.7429797155009306 },
+    //     { x: 3, y: 0.9753345122421678 },
+    //     { x: 4, y: 0.9995038341283518 },
+    //     { x: 5, y: 0.9999979060678188 },
+    //     { x: 6, y: 0.9999979060678188 },
+    //     { x: 7, y: 0.9995038341283518 },
+    //     { x: 8, y: 0.9753345122418252 },
+    //     { x: 9, y: 0.7429797136518924 },
+    //     { x: 10, y: 0.4386139941179287 },
+    //     { x: 11, y: 0.7424835496296249 },
+    //     { x: 12, y: 0.9506690244843357 },
+    //     { x: 13, y: 0.7424835496292823 },
+    //     { x: 14, y: 0.43861399226889053 },
+    //     { x: 15, y: 0.7429776215687494 },
+    //     { x: 16, y: 0.9748383463705196 },
+    //     { x: 17, y: 0.9748383463708622 },
+    //     { x: 18, y: 0.7429776234177874 },
+    //     { x: 19, y: 0.4386160843520337 },
+    //     { x: 20, y: 0.742979715500588 },
+    //     { x: 21, y: 0.9753345122421678 }
+    // ];
    // discrepancy - green
     explanationChart.data.datasets[1].data = [
         { x: 0, y: 0.3154091199969593 },
