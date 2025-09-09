@@ -5,6 +5,7 @@ import * as Chart from 'chart.js';
 export enum ChartLocation { Field, Transect }
 
 export const updateCharts = (globalState: IState, dispatch: any) => {
+  console.log("updateCharts being called");
   const { chartSettings, currSampleIdx, samples, transectIdx } = globalState;
   let { chart } = globalState;
 

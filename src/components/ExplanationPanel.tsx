@@ -16,7 +16,8 @@ export default function ExplanationChartPanel() {
   //const [displayOption, setDisplayOption] = useState(chartSettings.mode);
 
   if (explanationChartSettings.updateRequired) {
-      console.log("updating chart");
+      console.log("updating chart, logging global state");
+      console.log(globalState);
       updateExplanationChart(globalState, dispatch);
       dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: false} });
   }

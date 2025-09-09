@@ -55,6 +55,7 @@ export default function ChartPanel(props: ChartPanelProps) {
     const onSaveClick = () => {
         setShowOptions(false);
         dispatch({ type: Action.SET_CHART_SETTINGS, value: {mode: displayOption, updateRequired: true} });
+        console.log("onsaveclick is being called from chartPanel");
     }
 
     const optionsPanel = (
