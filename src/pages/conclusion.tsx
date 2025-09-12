@@ -105,7 +105,7 @@ export default function Conclusion() {
 
                   <FormControl style={{ border: '2.5px solid red', animation: 'blinker 2s linear infinite' }}>
                     <Select
-                      style={{ fontSize: '1.5vh' }}f
+                      style={{ fontSize: '1.5vh' }}
                       value={finalHypo + 3}
                       onChange={event => handleResponse(Number(event.target.value) - 3)}
                     >
@@ -143,9 +143,9 @@ export default function Conclusion() {
               <>
                 {/* Second part of the conclusion */}
                 <div className="text" style={{ marginTop: '1%' }}>
-                  <p><strong>Are there any data points that you cfonsidered particularly important when making your final judgment about the hypothesis?</strong></p>
+                  <p><strong>Are there any data points that you considered <u>particularly important</u> when making your final judgment about the hypothesis?</strong></p>
                   <p>
-                    Please write the data point coordinates in the textbox (hover over points on plot to get exact coordinates) OR check the box below if every data point was weighed equally in your judgement.                  </p>
+                    Please write the data point coordinates in the textbox (e.g., (0.1,2.7),(4.2,5.9)).  You can hover over points on the plot to get exact coordinates. OR Check the box below if every data point was weighed equally in your judgement.                  </p>
                   
                 </div>
 

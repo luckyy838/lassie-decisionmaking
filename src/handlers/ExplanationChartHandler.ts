@@ -1,6 +1,92 @@
 import * as Chart from 'chart.js';
 import { Action, IState, ExplanationChart } from '../state';
 import { explanationChartOption } from '../constants';
+import 'chartjs-plugin-annotation';
+
+
+const BoldTickUnderlayPlugin = {
+  id: 'boldTickUnderlay',
+  afterDraw(chart) {
+    const cfg = chart.options.highlightTicks || [];
+    if (!cfg.length) return;
+    const xScale = chart.scales['x-axis-0'];
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#000';
+    const fontSize = Chart.defaults.global.defaultFontSize || 12;
+    ctx.font = `bold ${fontSize}px ${Chart.defaults.global.defaultFontFamily}`;
+
+    cfg.forEach(h => {
+      let idx = typeof h.index === 'number' ? h.index : -1;
+      if (idx < 0 && h.value != null) {
+        idx = (chart.data.labels || []).indexOf(h.value);
+      }
+      if (idx < 0) return;
+      const x = xScale.getPixelForTick(idx);
+      const y = xScale.bottom + (chart.options.scales?.xAxes?.[0]?.ticks?.padding || 10) + 8;
+      const text = h.label != null ? h.label : chart.data.labels[idx];
+      ctx.fillText(text, x, y);
+    });
+
+    ctx.restore();
+  }
+};
+
+Chart.plugins.register(BoldTickUnderlayPlugin);
+
+
+
+/** Build annotation objects (Chart.js v2) for vertical lines at selected x's */
+function buildAnnotations(highlights: Array<{ index?: number; value?: number | string; lineColor?: string; lineWidth?: number; insideLabel?: string }>, labels?: Array<string | number>) {
+  return (highlights || [])
+    .map(h => {
+      let xVal: number | string | undefined;
+      if (typeof h.index === 'number') {
+        xVal = h.index;
+      } else if (h.value != null) {
+        xVal = h.value;
+      } else {
+        return null;
+      }
+      
+      return {
+        type: 'line',
+        mode: 'vertical',
+        scaleID: 'x-axis-0',
+        value: xVal,
+        borderColor: h.lineColor || 'black',
+        borderWidth: h.lineWidth || 2,
+        label: h.insideLabel
+          ? {
+              enabled: true,
+              content: h.insideLabel,
+              position: 'top',
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              fontColor: '#fff'
+            }
+          : {}
+      };
+    })
+    .filter(Boolean) as any[];
+}
+
+/** Apply highlights to the chart: both under-tick bold labels and vertical lines */
+function setHighlights(explanationChart: any, highlights: Array<{ index?: number; value?: number; label?: string; lineColor?: string; lineWidth?: number; insideLabel?: string }>) {
+  if (!explanationChart) return;
+
+  // 1) Custom under-axis bold labels (consumed by BoldTickUnderlayPlugin)
+  (explanationChart.options as any).highlightTicks = highlights;
+
+  // 2) Vertical annotation lines + in-chart labels
+  (explanationChart.options as any).annotation = (explanationChart.options as any).annotation || {};
+  (explanationChart.options as any).annotation.annotations = buildAnnotations(highlights);
+
+  // leave space for under-axis labels
+  (explanationChart.options as any).layout = (explanationChart.options as any).layout || {};
+  (explanationChart.options as any).layout.padding = { ...(explanationChart.options as any).layout.padding, bottom: 24 };
+}
 
 
 export const updateExplanationChart = (globalState: IState, dispatch: any) => {
@@ -124,6 +210,17 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
 
     // ]
     ;
+
+    const dynamicHighlights = Array.isArray(robotSuggestions)
+  ? robotSuggestions.map((s) => ({
+      index: s.index,
+      lineColor: '#000',
+      lineWidth: 2,
+      insideLabel: `#${String.fromCharCode(s.index + 65)}`
+    }))
+  : [];
+
+setHighlights(explanationChart, dynamicHighlights);
      
     } else {
       //console.log("chart.shearChart undefined");
@@ -193,9 +290,48 @@ export const initializeExplanationChart = (globalState: IState, dispatch: any) :
   
       if (explanationCtx) {
         explanationChart = new Chart(explanationCtx, explanationChartOption as any);
-
       }
     }
+
+    (explanationChart.options as any).scales = (explanationChart.options as any).scales || {};
+(explanationChart.options as any).scales.xAxes = (explanationChart.options as any).scales.xAxes || [{ id: 'x-axis-0' }];
+if (!(explanationChart.options as any).scales.xAxes[0]) {
+  (explanationChart.options as any).scales.xAxes[0] = { id: 'x-axis-0' };
+}
+(explanationChart.options as any).scales.xAxes[0].type = 'linear';
+(explanationChart.options as any).scales.xAxes[0].ticks = {
+  ...(explanationChart.options as any).scales.xAxes[0].ticks,
+  min: 0,
+  max: 21,
+  padding: 10
+};
+
+// Optional: y range you expect
+(explanationChart.options as any).scales.yAxes = (explanationChart.options as any).scales.yAxes || [{}];
+(explanationChart.options as any).scales.yAxes[0].ticks = {
+  ...(explanationChart.options as any).scales.yAxes[0].ticks,
+  min: 0,
+  max: 1
+};
+
+// Initial highlights (e.g., from robotSuggestions if present)
+// const { currUserStep } = globalState;
+// const { robotSuggestions } = currUserStep || {};
+const initialHighlights = Array.isArray(robotSuggestions) && robotSuggestions.length
+  ? robotSuggestions.map((s) => ({
+      index: s.index,   // text under the tick
+      lineColor: '#000',
+      lineWidth: 2,
+      insideLabel: `#${String.fromCharCode(s.index + 65)}` // in-chart label above the line (optional)
+    }))
+  : [
+      // fallback if robotSuggestions is empty
+      { index: 2,  label: 'Site A', lineColor: '#000', lineWidth: 2, insideLabel: 'A' },
+      { index: 11, label: 'Hub',    lineColor: '#000', lineWidth: 2, insideLabel: 'Hub' },
+      { index: 15, label: 'Peak',   lineColor: '#000', lineWidth: 2, insideLabel: 'Peak' }
+    ];
+
+setHighlights(explanationChart, initialHighlights);
     explanationChart.data.datasets[0].data = [{
         x: 10,
         y: 0.6
