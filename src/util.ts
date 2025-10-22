@@ -183,7 +183,77 @@ export function parseQueryString(query: string) {
   return queryParams;
 }
 
-// This function calculates the robot's suggested location
+//This function calculates the robot's suggested location
+// export async function calculateRobotSuggestions(samples: Sample[], globalState: IState, objectives: Objective[]) {
+
+//   // Prepare inputs for flask backend calculation
+//   let locations : number[] = [];
+//   let measurements : number[] = [];
+//   let moistureValues : number[][] = [];
+//   let shearValues : number[][] = [];
+
+//   for (let i = 0; i < samples.length; i++) {
+//     locations.push(samples[i].index);
+//     measurements.push(samples[i].measurements);
+//     moistureValues.push(Array.from(samples[i].moisture));
+//     shearValues.push(Array.from(samples[i].shear));
+//   }
+
+//   //console.log({locations, measurements, moistureValues, shearValues});
+
+//   // Compute the robot suggestions based on each objective (limit to 3 suggestions)
+//   let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues);
+//   let { spatial_selection, variable_selection, discrepancy_selection, discrepancy_low_selection, spatial_reward, variable_reward, discrepancy_reward } = robotSuggestions;
+
+//   let objective_pattern = globalState.initialResolutionMethod;
+//   //TODO: check how mt hood version updates initial objective pattern and make sure this isn't just the initial one
+//   // Return the top 3 suggested locations unordered
+//   let locs;
+
+//   switch (objectives[0].objective) {
+//     case objectiveOptions[0]: {
+//       locs = spatial_selection;
+//       break;
+//     }
+//     case objectiveOptions[1]: {
+//       locs = discrepancy_selection;
+//       break;
+//     }
+//     //this is the free response option
+//     // case objectiveOptions[2]: {
+//     //   locs = discrepancy_low_selection;
+//     //   break;
+//     // } 
+//     //removing extra option
+//     // case objectiveOptions[3]: {
+//     //   locs = discrepancy_low_selection;
+//     //   break;
+//     // }
+//   }
+
+//   let results : PreSample[] = locs.map((loc) => {
+//     let suggestion : PreSample = {
+//       index: loc,
+//       type: 'robot',
+//       measurements: NUM_MEASUREMENTS,
+//       normOffsetX: sampleLocations[loc][0],
+//       normOffsetY: sampleLocations[loc][1],
+//       isHovered: false
+//     }
+//     return suggestion;
+//   });
+
+//   console.log("logging from calculateRobotSuggestions");
+//   console.log({locations, measurements, moistureValues, shearValues, robotSuggestions, results, spatial_reward, variable_reward, discrepancy_reward});
+  
+//   return {
+//     results: results,
+//     spatialReward: spatial_reward,
+//     variableReward: variable_reward,
+//     discrepancyReward: discrepancy_reward
+//   };
+// }
+
 export async function calculateRobotSuggestions(samples: Sample[], globalState: IState, objectives: Objective[]) {
 
   // Prepare inputs for flask backend calculation
@@ -200,49 +270,64 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   }
 
   //console.log({locations, measurements, moistureValues, shearValues});
-
+  let objective_pattern = globalState.currUserStep.resolutionMethod;
   // Compute the robot suggestions based on each objective (limit to 3 suggestions)
-  let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues);
-  let { spatial_selection, variable_selection, discrepancy_selection, discrepancy_low_selection, spatial_reward, variable_reward, discrepancy_reward } = robotSuggestions;
 
-  // Return the top 3 suggested locations unordered
-  let locs;
-
+  let objective_repre;
   switch (objectives[0].objective) {
     case objectiveOptions[0]: {
-      locs = spatial_selection;
+      if (objective_pattern == 0) {
+        objective_repre = 0; //info focused
+      } else if (objective_pattern == 1) {
+          objective_repre = 0.25; //info hier
+      } else {
+          objective_repre = 0.5; // trade off
+      }
+        
       break;
     }
     case objectiveOptions[1]: {
-      locs = discrepancy_selection;
+      if (objective_pattern == 0) {
+        objective_repre = 1; //disp focused
+      } else if (objective_pattern == 1) {
+          objective_repre = 0.75; //disp hier
+      } else {
+          objective_repre = 0.5; // trade off
+      }
       break;
     }
-    //this is the free response option
     // case objectiveOptions[2]: {
     //   locs = discrepancy_low_selection;
     //   break;
-    // } 
-    //removing extra option
+    // }
     // case objectiveOptions[3]: {
     //   locs = discrepancy_low_selection;
     //   break;
     // }
   }
-
+  let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues, objective_repre);
+  console.log(robotSuggestions)
+  let final_suggestion = [robotSuggestions.final_suggestion]
+  let discrepancy_selection = [0.1,0.2,0.4]
+  let spatial_reward = []
+  let variable_reward = []
+  let discrepancy_reward = []
+  // Return the top 3 suggested locations unordered
+  let locs;
+  locs = final_suggestion;
   let results : PreSample[] = locs.map((loc) => {
     let suggestion : PreSample = {
       index: loc,
       type: 'robot',
       measurements: NUM_MEASUREMENTS,
-      normOffsetX: sampleLocations[loc][0],
-      normOffsetY: sampleLocations[loc][1],
+      normOffsetX: 300,
+      normOffsetY: 300,
       isHovered: false
     }
     return suggestion;
   });
 
-  console.log("logging from calculateRobotSuggestions");
-  console.log({locations, measurements, moistureValues, shearValues, robotSuggestions, results, spatial_reward, variable_reward, discrepancy_reward});
+  console.log({locations, measurements, moistureValues, shearValues, robotSuggestions, results});
   
   return {
     results: results,
@@ -252,19 +337,54 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   };
 }
 
-function flaskCalculations(locations: number[], measurements: number[], moistureValues: number[][], shearValues: number[][]) {
+// function flaskCalculations(locations: number[], measurements: number[], moistureValues: number[][], shearValues: number[][]) {
+
+//   let inputs = {
+//     locations : locations,
+//     measurements: measurements,
+//     moistureValues: moistureValues,
+//     shearValues: shearValues
+//   }
+  
+//   return new Promise((resolve, reject) => {
+//     //fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
+//     // https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process // production URL1 From UPenn
+//     // http://ec2-54-183-157-53.us-west-1.compute.amazonaws.com:8080/process // production URL2 From AWS EC2
+//     fetch('http://127.0.0.1:5000/process', { //local development URL
+//       method: 'POST',
+//       mode: 'cors',
+//       cache: 'no-cache',
+//       headers: {
+//         'Accept': 'application/json, text/plain, */*',
+//         'Content-Type': "application/json",
+//       },
+//       body: JSON.stringify(inputs), 
+//     }).then(
+//       res => res.json()
+//     ).then(
+//       data => {
+//         console.log({data});
+//         resolve(data);
+//       }
+//     ).catch((err) => {
+//       reject(err);
+//     });
+//   });
+// }
+
+function flaskCalculations(locations: number[], measurements: number[], moistureValues: number[][], shearValues: number[][], objective_repre: number) {
 
   let inputs = {
     locations : locations,
     measurements: measurements,
     moistureValues: moistureValues,
-    shearValues: shearValues
+    shearValues: shearValues,
+    objective_repre: objective_repre
   }
-  
+  console.log("objective representation" + objective_repre)
+  console.log("locations" + locations)
   return new Promise((resolve, reject) => {
-    //fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
-    // https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process // production URL1 From UPenn
-    // http://ec2-54-183-157-53.us-west-1.compute.amazonaws.com:8080/process // production URL2 From AWS EC2
+    // fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
     fetch('http://127.0.0.1:5000/process', { //local development URL
       method: 'POST',
       mode: 'cors',

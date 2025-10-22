@@ -63,7 +63,7 @@ function buildAnnotations(highlights: Array<{ index?: number; value?: number | s
               enabled: true,
               content: h.insideLabel,
               position: 'top',
-              backgroundColor: 'rgba(0,0,0,0.7)',
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
               fontColor: '#fff'
             }
           : {}
@@ -212,11 +212,11 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     ;
 
     const dynamicHighlights = Array.isArray(robotSuggestions)
-  ? robotSuggestions.map((s) => ({
+  ? robotSuggestions.map((s, k) => ({
       index: s.index,
       lineColor: '#000',
       lineWidth: 2,
-      insideLabel: `#${String.fromCharCode(s.index + 65)}`
+      insideLabel: `${String.fromCharCode(k + 65)}`
     }))
   : [];
 
@@ -384,7 +384,7 @@ var resetCanvas = function(){
   
     let explanationCanvas = document.createElement('canvas');
     explanationCanvas.id = 'explanationChart';
-    explanationCanvas.width = 672;
+    explanationCanvas.width = 600;
     explanationCanvas.height = 200;
     document.getElementById('explanationChartParent')?.appendChild(explanationCanvas);
     //TODO: make sure to add everything under a parent div in ExplanationChart file with the right title
