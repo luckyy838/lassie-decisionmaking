@@ -420,9 +420,11 @@ const onObjectiveTextChange = e => {
         
     </div>  
 
+
+    //TODO actually make this into multiple questions 
     const explanationQuestion = 
     <div>
-        <p><i><strong>How much did the visual explanation provided for the robot's suggestions positively influence your decision to accept?</strong></i></p>
+        <p><i><strong>How much did the visual explanation provided for the robot's suggestions <u>positively influence</u> your decision to accept?</strong></i></p>
           <div className="slider-box">
             <Box>
               <Slider
@@ -440,6 +442,8 @@ const onObjectiveTextChange = e => {
             </Box>
           </div>
     </div>
+
+    
     
 
 // Apply new changes by Zeyu 6/21/2022
