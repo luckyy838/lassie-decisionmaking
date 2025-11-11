@@ -202,7 +202,7 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
       {showRobotSuggestions && robotSuggestions &&
         robotSuggestions.map((suggestion, rowIndex) => (
           <PositionIndicator
-            key={suggestion.index + suggestion.normOffsetX + suggestion.normOffsetY}
+            key={Number(suggestion.index) + suggestion.normOffsetX + suggestion.normOffsetY}
             left={suggestion.normOffsetX * height / NORMALIZED_HEIGHT}
             top={suggestion.normOffsetY * height / NORMALIZED_HEIGHT}
             rowIndex={rowIndex}

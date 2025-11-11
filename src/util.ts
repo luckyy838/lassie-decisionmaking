@@ -306,13 +306,53 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     // }
   }
   let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues, objective_repre);
-  console.log(robotSuggestions)
+  console.log("robotSuggestions from util" + robotSuggestions)
   let final_suggestion = [robotSuggestions.final_suggestion]
+  console.log("final suggestion" + final_suggestion)
   let discrepancy_selection = [0.1,0.2,0.4]
-  let spatial_reward = []
+  let spatial_reward: number[] = []
   let variable_reward = []
-  let discrepancy_reward = []
+  let discrepancy_reward: number[] = []
   // Return the top 3 suggested locations unordered
+  // reward_vector = []
+  //   index = 0
+  //   for i in range(22):
+  //       if i % 2 == 0 or i == 21:
+  //           chunk_size = 5
+  //       else:
+  //           chunk_size = 4
+
+  //       chunk = reward_vector_100[index:index+chunk_size]
+  //       print("CHUNK", chunk)
+  //       avg_info = sum(pair[0] for pair in chunk) / chunk_size #make sure that first values are info
+  //       avg_disp = sum(pair[1] for pair in chunk) / chunk_size
+
+  //       reward_vector.append([float(avg_info), float(avg_disp)])
+  //       index += chunk_size
+  let index = 0
+  let chunk_size = 0
+  for(let i = 0; i<22; i++){
+    if(i%2 ==0 || i == 21){
+      chunk_size = 5
+    }
+    else{
+      chunk_size = 4
+    }
+
+    let info_chunk = robotSuggestions.info_gaussian.slice(index, index+chunk_size)
+    let disp_chunk = robotSuggestions.disp_gaussian.slice(index, index+chunk_size)
+    let info_chunk_average = info_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
+    let disp_chunk_average = disp_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
+    spatial_reward.push(info_chunk_average)
+    discrepancy_reward.push(disp_chunk_average)
+    index += chunk_size
+
+  }
+  
+  //normalize spatial_reward
+  //
+  
+
   let locs;
   locs = final_suggestion;
   let results : PreSample[] = locs.map((loc) => {
@@ -327,7 +367,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     return suggestion;
   });
 
-  console.log({locations, measurements, moistureValues, shearValues, robotSuggestions, results});
+  console.log("utils print statement" + {locations, measurements, moistureValues, shearValues, robotSuggestions, results});
   
   return {
     results: results,

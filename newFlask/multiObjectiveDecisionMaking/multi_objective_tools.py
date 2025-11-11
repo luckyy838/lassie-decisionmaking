@@ -110,7 +110,7 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
     print("ENTERED MULTI OBJECTIVE FUNCTION")
     # based on different level, use pareto to generate different type of solutions 
     # print("vector", vector)
-    # print("vector shape", vector.shape)
+    print("vector shape", vector.shape)
     normalized_vector = normalize_columns(vector)
     pareto_sets, utopia_point, dist_to_utopia, pareto_sets_loc = \
                                         pareto_optimal_sets(normalized_vector)
