@@ -212,8 +212,10 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     ;
 
     const dynamicHighlights = Array.isArray(robotSuggestions)
-  ? robotSuggestions.map((s, k) => ({
-      index: s.index,
+  ? robotSuggestions.map((s, k) => (
+    
+     {
+      index: s.index, //supposed to be s.index TODO
       lineColor: '#000',
       lineWidth: 2,
       insideLabel: `${String.fromCharCode(k + 65)}`

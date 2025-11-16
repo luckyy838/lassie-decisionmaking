@@ -350,6 +350,14 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   }
   
   //normalize spatial_reward
+  let infoMin = Math.min(...spatial_reward)
+  let infoMax = Math.max(...spatial_reward)
+  spatial_reward = spatial_reward.map((x) => (x-infoMin)/(infoMax-infoMin))
+
+  let dispMin = Math.min(...discrepancy_reward)
+  let dispMax = Math.max(...discrepancy_reward)
+  discrepancy_reward = discrepancy_reward.map((x) => (x-dispMin)/(dispMax-dispMin)
+)
   //
   
 
@@ -360,8 +368,8 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
       index: loc,
       type: 'robot',
       measurements: NUM_MEASUREMENTS,
-      normOffsetX: 300,
-      normOffsetY: 300,
+      normOffsetX: sampleLocations[loc][0],
+      normOffsetY: sampleLocations[loc][1],
       isHovered: false
     }
     return suggestion;
