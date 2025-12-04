@@ -211,18 +211,19 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     // ]
     ;
 
-    const dynamicHighlights = Array.isArray(robotSuggestions)
-  ? robotSuggestions.map((s, k) => (
+//     const dynamicHighlights = Array.isArray(robotSuggestions)
+//   ? robotSuggestions.map((s, k) => (
     
-     {
-      index: s.index, //supposed to be s.index TODO
-      lineColor: '#000',
-      lineWidth: 2,
-      insideLabel: `${String.fromCharCode(k + 65)}`
-    }))
-  : [];
+//      {
+//       index: s.index, //supposed to be s.index TODO
+//       lineColor: '#000',
+//       lineWidth: 2,
+//       insideLabel: `${String.fromCharCode(k + 65)}`
+//     }))
+//   : [];
 
-setHighlights(explanationChart, dynamicHighlights);
+// setHighlights(explanationChart, dynamicHighlights);
+//12/3 testing commenting this out
      
     } else {
       //console.log("chart.shearChart undefined");

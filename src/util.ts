@@ -358,6 +358,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   let dispMax = Math.max(...discrepancy_reward)
   discrepancy_reward = discrepancy_reward.map((x) => (x-dispMin)/(dispMax-dispMin)
 )
+//12/3 COMMENTING OUT so as to not normalize the reward values and just display on the y axis within the original range. still have to change the range
   //
   
 

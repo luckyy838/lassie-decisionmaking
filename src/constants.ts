@@ -368,7 +368,7 @@ export const PopboxTypeEnum = {
 //   }
 // };
 export const explanationChartOption = {
-  type: 'line',
+  type: 'bar',
   data: {
     labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '','','','','','','',''],
     datasets: [
@@ -440,12 +440,13 @@ export const explanationChartOption = {
         id: 'reward',
         scaleLabel: {
           display: true,
-          labelString: 'Reward Value'
+          labelString: 'Reward'
         },
         ticks: {
           min: 0,
-          max: 1.1,
-          stepSize: 0.1
+          max: 1,
+          stepSize: 0.1,
+          display:false
         }
       }],
       
@@ -454,12 +455,12 @@ export const explanationChartOption = {
         position: 'bottom',
         scaleLabel: {
           display: true,
-          labelString: 'Transect'
+          labelString: 'Location Space'
         },
         ticks: {
           display: false,
           min: 0,
-          max: 21,
+          max: 22,
           stepSize: 1
         }
       }]
