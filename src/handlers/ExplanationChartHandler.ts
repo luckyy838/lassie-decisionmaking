@@ -146,36 +146,35 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
       const spatialRewardFormat = spatialReward.map((j,i) => ({x:i, y:j}));
       console.log("formatted spatial reward" + spatialRewardFormat);
 
-      explanationChart.data.datasets[0].data = spatialRewardFormat;
+      // explanationChart.data.datasets[0].data = spatialRewardFormat;
       
       
      
-
-
-    //   [
-    //     { x: 0, y: 0.7429797155009306 },
-    //     { x: 1, y: 0.43861608620107184 },
-    //     { x: 2, y: 0.7429797155009306 },
-    //     { x: 3, y: 0.9753345122421678 },
-    //     { x: 4, y: 0.9995038341283518 },
-    //     { x: 5, y: 0.9999979060678188 },
-    //     { x: 6, y: 0.9999979060678188 },
-    //     { x: 7, y: 0.9995038341283518 },
-    //     { x: 8, y: 0.9753345122418252 },
-    //     { x: 9, y: 0.7429797136518924 },
-    //     { x: 10, y: 0.4386139941179287 },
-    //     { x: 11, y: 0.7424835496296249 },
-    //     { x: 12, y: 0.9506690244843357 },
-    //     { x: 13, y: 0.7424835496292823 },
-    //     { x: 14, y: 0.43861399226889053 },
-    //     { x: 15, y: 0.7429776215687494 },
-    //     { x: 16, y: 0.9748383463705196 },
-    //     { x: 17, y: 0.9748383463708622 },
-    //     { x: 18, y: 0.7429776234177874 },
-    //     { x: 19, y: 0.4386160843520337 },
-    //     { x: 20, y: 0.742979715500588 },
-    //     { x: 21, y: 0.9753345122421678 }
-    // ];
+      explanationChart.data.datasets[0].data =
+      [
+        { x: 0, y: 0.7429797155009306 },
+        { x: 1, y: 0.43861608620107184 },
+        { x: 2, y: 0.7429797155009306 },
+        { x: 3, y: 0.9753345122421678 },
+        { x: 4, y: 0.9995038341283518 },
+        { x: 5, y: 0.9999979060678188 },
+        { x: 6, y: 0.9999979060678188 },
+        { x: 7, y: 0.9995038341283518 },
+        { x: 8, y: 0.9753345122418252 },
+        { x: 9, y: 0.7429797136518924 },
+        { x: 10, y: 0.4386139941179287 },
+        { x: 11, y: 0.7424835496296249 },
+        { x: 12, y: 0.9506690244843357 },
+        { x: 13, y: 0.7424835496292823 },
+        { x: 14, y: 0.43861399226889053 },
+        { x: 15, y: 0.7429776215687494 },
+        { x: 16, y: 0.9748383463705196 },
+        { x: 17, y: 0.9748383463708622 },
+        { x: 18, y: 0.7429776234177874 },
+        { x: 19, y: 0.4386160843520337 },
+        { x: 20, y: 0.742979715500588 },
+        { x: 21, y: 0.9753345122421678 }
+    ];
    // discrepancy - green
 
    console.log("logging discrepancy reward from explanation chart");
@@ -183,32 +182,35 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
    const discrepancyRewardFormat = discrepancyReward.map((j,i) => ({x:i, y:j}));
       console.log("formatted discrepancy reward" + discrepancyRewardFormat);
 
-    explanationChart.data.datasets[1].data = discrepancyRewardFormat;
-    // [
-    //     { x: 0, y: 0.3154091199969593 },
-    //     { x: 1, y: 0.2838104103438007 },
-    //     { x: 2, y: 0.264149394170256 },
-    //     { x: 3, y: 0.24484835963150375 },
-    //     { x: 4, y: 0.22554732509275158 },
-    //     { x: 5, y: 0.20624629055399937 },
-    //     { x: 6, y: 0.18694525601524728 },
-    //     { x: 7, y: 0.16764422147649513 },
-    //     { x: 8, y: 0.1483431869377429 },
-    //     { x: 9, y: 0.1291622211682804 },
-    //     { x: 10, y: 0.13026312607811671 },
-    //     { x: 11, y: 0.18016271759208138 },
-    //     { x: 12, y: 0.23357978352283973 },
-    //     { x: 13, y: 0.2870782718242321 },
-    //     { x: 14, y: 0.339743653685639 },
-    //     { x: 15, y: 0.3460147117399505 },
-    //     { x: 16, y: 0.34759080041423723 },
-    //     { x: 17, y: 0.34919553274652965 },
-    //     { x: 18, y: 0.35668745798119095 },
-    //     { x: 19, y: 0.36725129317627575 },
-    //     { x: 20, y: 0.37752276015714054 },
-    //     { x: 21, y: 0.3805363782074797 }
+    // explanationChart.data.datasets[1].data = discrepancyRewardFormat;
+    // console.log("checking that data is assigned" + explanationChart.data.datasets[1].data[0])
+    explanationChart.data.datasets[1].data = 
+    [
+        { x: 0, y: 0.3154091199969593 },
+        { x: 1, y: 0.2838104103438007 },
+        { x: 2, y: 0.264149394170256 },
+        { x: 3, y: 0.24484835963150375 },
+        { x: 4, y: 0.22554732509275158 },
+        { x: 5, y: 0.20624629055399937 },
+        { x: 6, y: 0.18694525601524728 },
+        { x: 7, y: 0.16764422147649513 },
+        { x: 8, y: 0.1483431869377429 },
+        { x: 9, y: 0.1291622211682804 },
+        { x: 10, y: 0.13026312607811671 },
+        { x: 11, y: 0.18016271759208138 },
+        { x: 12, y: 0.23357978352283973 },
+        { x: 13, y: 0.2870782718242321 },
+        { x: 14, y: 0.339743653685639 },
+        { x: 15, y: 0.3460147117399505 },
+        { x: 16, y: 0.34759080041423723 },
+        { x: 17, y: 0.34919553274652965 },
+        { x: 18, y: 0.35668745798119095 },
+        { x: 19, y: 0.36725129317627575 },
+        { x: 20, y: 0.37752276015714054 },
+        { x: 21, y: 0.3805363782074797 },
+        
 
-    // ]
+    ]
     ;
 
 //     const dynamicHighlights = Array.isArray(robotSuggestions)
@@ -305,7 +307,7 @@ if (!(explanationChart.options as any).scales.xAxes[0]) {
 (explanationChart.options as any).scales.xAxes[0].ticks = {
   ...(explanationChart.options as any).scales.xAxes[0].ticks,
   min: 0,
-  max: 21,
+  max: 100,
   padding: 10
 };
 
@@ -314,7 +316,7 @@ if (!(explanationChart.options as any).scales.xAxes[0]) {
 (explanationChart.options as any).scales.yAxes[0].ticks = {
   ...(explanationChart.options as any).scales.yAxes[0].ticks,
   min: 0,
-  max: 1
+  max: 10 //trying to see if setting it higher works TODO (change to be scaled)
 };
 
 // Initial highlights (e.g., from robotSuggestions if present)
@@ -329,9 +331,9 @@ const initialHighlights = Array.isArray(robotSuggestions) && robotSuggestions.le
     }))
   : [
       // fallback if robotSuggestions is empty
-      { index: 2,  label: 'Site A', lineColor: '#000', lineWidth: 2, insideLabel: 'A' },
-      { index: 11, label: 'Hub',    lineColor: '#000', lineWidth: 2, insideLabel: 'Hub' },
-      { index: 15, label: 'Peak',   lineColor: '#000', lineWidth: 2, insideLabel: 'Peak' }
+      // { index: 2,  label: 'Site A', lineColor: '#000', lineWidth: 2, insideLabel: 'A' },
+      // { index: 11, label: 'Hub',    lineColor: '#000', lineWidth: 2, insideLabel: 'Hub' },
+      // { index: 15, label: 'Peak',   lineColor: '#000', lineWidth: 2, insideLabel: 'Peak' }
     ];
 
 setHighlights(explanationChart, initialHighlights);

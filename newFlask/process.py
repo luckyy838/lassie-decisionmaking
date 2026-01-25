@@ -72,23 +72,24 @@ def process():
     print("reward vector 100", reward_vector_100)
     #TODO put in 22 buckets
     #alternating between buckets of 4 values and 5 values and the very last value is 6 values
-    reward_vector = []
-    index = 0
-    for i in range(22):
-        if i % 2 == 0 or i == 21:
-            chunk_size = 5
-        else:
-            chunk_size = 4
+    #NOTE: commented this out, not chunking anymore 
+    # reward_vector = []
+    # index = 0
+    # for i in range(22):
+    #     if i % 2 == 0 or i == 21:
+    #         chunk_size = 5
+    #     else:
+    #         chunk_size = 4
 
-        chunk = reward_vector_100[index:index+chunk_size]
-        print("CHUNK", chunk)
-        avg_info = sum(pair[0] for pair in chunk) / chunk_size #make sure that first values are info
-        avg_disp = sum(pair[1] for pair in chunk) / chunk_size
+    #     chunk = reward_vector_100[index:index+chunk_size]
+    #     print("CHUNK", chunk)
+    #     avg_info = sum(pair[0] for pair in chunk) / chunk_size #make sure that first values are info
+    #     avg_disp = sum(pair[1] for pair in chunk) / chunk_size
 
-        reward_vector.append([float(avg_info), float(avg_disp)])
-        index += chunk_size
+    #     reward_vector.append([float(avg_info), float(avg_disp)])
+    #     index += chunk_size
 
-    print("Reward vector from process.py", reward_vector)
+    # print("Reward vector from process.py", reward_vector)
     final_type, final_suggestion_index, suggestion_sets_index, except_index, pareto_sets, pareto_locs = run_multi_objective_odsf(
                     reward_vector_100, information_level, multi_objective_pattern, 
                     info_signal, disp_signal, noise_esti, k_info_signal=k_info_signal_, k_noise=k_noise_, k_info_low = k_info_low_, k_info_high = k_info_high_)
@@ -101,12 +102,12 @@ def process():
     print("final suggestion index after floor", final_suggestion_index)
     final_suggestion = DM.detailed_loc_flattend[final_suggestion_index]   # TODO bring back this line i'm just testing if it changes anything
     #final_suggestion = final_suggestion_index
-    final_suggestion = math.floor(((final_suggestion/0.01010101)/99)*21)
+    final_suggestion = math.floor(((final_suggestion/0.01010101)/99)*21)  #NOTE
     print("suggestion sets index", suggestion_sets_index)
 
 
     suggestion_sets = DM.detailed_loc_flattend[suggestion_sets_index]
-    suggestion_sets = np.floor(((suggestion_sets/0.01010101)/99)*21)
+    suggestion_sets = np.floor(((suggestion_sets/0.01010101)/99)*21) #NOTE
     #suggestion_sets = suggestion_sets_index
 
     plot_test(DM.location_flattend, DM.detailed_loc_flattend,  

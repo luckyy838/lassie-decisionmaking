@@ -331,33 +331,35 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   //       index += chunk_size
   let index = 0
   let chunk_size = 0
-  for(let i = 0; i<22; i++){
-    if(i%2 ==0 || i == 21){
-      chunk_size = 5
-    }
-    else{
-      chunk_size = 4
-    }
+  for(let i = 0; i<100; i++){
+    // if(i%2 ==0 || i == 21){
+    //   chunk_size = 5
+    // }
+    // else{
+    //   chunk_size = 4
+    // }
 
-    let info_chunk = robotSuggestions.info_gaussian.slice(index, index+chunk_size)
-    let disp_chunk = robotSuggestions.disp_gaussian.slice(index, index+chunk_size)
-    let info_chunk_average = info_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
-    let disp_chunk_average = disp_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
-    spatial_reward.push(info_chunk_average)
-    discrepancy_reward.push(disp_chunk_average)
-    index += chunk_size
+    // let info_chunk = robotSuggestions.info_gaussian.slice(index, index+chunk_size)
+    // let disp_chunk = robotSuggestions.disp_gaussian.slice(index, index+chunk_size)
+    // let info_chunk_average = info_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
+    // let disp_chunk_average = disp_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
+
+    
+    spatial_reward.push(robotSuggestions.info_gaussian[i])
+    discrepancy_reward.push(robotSuggestions.disp_gaussian[i])
+    // index += chunk_size
 
   }
   
   //normalize spatial_reward
-  let infoMin = Math.min(...spatial_reward)
-  let infoMax = Math.max(...spatial_reward)
-  spatial_reward = spatial_reward.map((x) => (x-infoMin)/(infoMax-infoMin))
+//   let infoMin = Math.min(...spatial_reward)
+//   let infoMax = Math.max(...spatial_reward)
+//   spatial_reward = spatial_reward.map((x) => (x-infoMin)/(infoMax-infoMin))
 
-  let dispMin = Math.min(...discrepancy_reward)
-  let dispMax = Math.max(...discrepancy_reward)
-  discrepancy_reward = discrepancy_reward.map((x) => (x-dispMin)/(dispMax-dispMin)
-)
+//   let dispMin = Math.min(...discrepancy_reward)
+//   let dispMax = Math.max(...discrepancy_reward)
+//   discrepancy_reward = discrepancy_reward.map((x) => (x-dispMin)/(dispMax-dispMin)
+// )
 //12/3 COMMENTING OUT so as to not normalize the reward values and just display on the y axis within the original range. still have to change the range
   //
   
