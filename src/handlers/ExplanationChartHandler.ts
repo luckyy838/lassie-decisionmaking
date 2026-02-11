@@ -304,17 +304,17 @@ if (!(explanationChart.options as any).scales.xAxes[0]) {
 (explanationChart.options as any).scales.xAxes[0].ticks = {
   ...(explanationChart.options as any).scales.xAxes[0].ticks,
   min: 0,
-  max: 21,
+  max: 99,
   padding: 10
 };
 
 // Optional: y range you expect
-(explanationChart.options as any).scales.yAxes = (explanationChart.options as any).scales.yAxes || [{}];
-(explanationChart.options as any).scales.yAxes[0].ticks = {
-  ...(explanationChart.options as any).scales.yAxes[0].ticks,
-  min: 0,
-  max: 1
-};
+// (explanationChart.options as any).scales.yAxes = (explanationChart.options as any).scales.yAxes || [{}];
+// (explanationChart.options as any).scales.yAxes[0].ticks = {
+//   ...(explanationChart.options as any).scales.yAxes[0].ticks,
+//   min: 0,
+//   max: 5
+// };
 
 // Initial highlights (e.g., from robotSuggestions if present)
 // const { currUserStep } = globalState;

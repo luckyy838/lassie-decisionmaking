@@ -443,9 +443,9 @@ export const explanationChartOption = {
           labelString: 'Reward Value'
         },
         ticks: {
-          min: 0,
-          max: 1.1,
-          stepSize: 0.1
+          display: false,
+          min: 0
+          // stepSize: 0.1
         }
       }],
       
