@@ -47,7 +47,12 @@ k_info_high_ = 0.7
 @app.route('/process', methods=['POST'])
 @cross_origin()
 def process():
-    inputs = request.json
+    print("got inside process")
+    print("request content length", request.content_length)
+    print("request data", request.data)
+    inputs = request.get_json(force=True) #used to be request.json
+    print("inputs are", inputs)
+    #lines above changed 4/10
     location = np.array(inputs['locations'],dtype=np.int64)
     print("locations before normalizing", location)
     location_norm = (location)/21
@@ -101,8 +106,8 @@ def process():
     #final_suggestion_index = math.floor((final_suggestion_index/99)*21)
     print("final suggestion index after floor", final_suggestion_index)
     final_suggestion = DM.detailed_loc_flattend[final_suggestion_index]   # TODO bring back this line i'm just testing if it changes anything
-    #final_suggestion = final_suggestion_index
-    final_suggestion = math.floor(((final_suggestion/0.01010101)/99)*21)
+    #final_suggestion = final_suggestion_indexi
+    final_suggestion = math.floor(((final_suggestion/0.01010101)/99)*21) #changed from math.floor to np.floor
     print("suggestion sets index", suggestion_sets_index)
 
 
@@ -140,6 +145,9 @@ def process():
     print('Therefore, the robot suggests sampling at location : ', final_suggestion)
     print('---------------------------------------------------------------------------------------------------------------------------------------')
     print(suggestion_sets)
+ #4/10 error that there is no toList on a string
+    print("is instance", isinstance(final_suggestion, np.ndarray))
+    #print("type", type(final_suggestion))
     final_suggestion = str(final_suggestion)
     output = {
         'final_type': final_type,
@@ -153,6 +161,8 @@ def process():
         'disp_signal': disp_signal,
 
     }
+    print("process output", output)
+    print("process jsonify", jsonify(output))
     # output = findbestlocation(DM.location_flattend, info_gaussian, disp_gaussian, feature_gaussian)
     # app.config['ros_node'].publish_gui_information([0.2,0.1,0.1])
     #deploy_plot(PathPlanning.ObjectiveComputing, location, location, sample, mm, erodi, output)

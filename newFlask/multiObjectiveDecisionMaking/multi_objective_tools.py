@@ -198,6 +198,7 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
         ref_level = np.array([0, 0.25, 0.5, 0.75, 1.0])
         final_type = ref_level[np.argmin(np.abs(np.array(ref_level) - final_level))]
         final_suggestion = suggestion_sets[int(final_type * 4)]
+        #final_suggestion = np.unique(suggestion_sets)
     return final_type, final_suggestion, suggestion_sets, except_list, pareto_sets, pareto_sets_loc
         
 

@@ -282,6 +282,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
           objective_repre = 0.25; //info hier
       } else {
           objective_repre = 0.5; // trade off
+          console.log("info trade off ")
       }
         
       break;
@@ -293,6 +294,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
           objective_repre = 0.75; //disp hier
       } else {
           objective_repre = 0.5; // trade off
+          console.log("disp tradeoff")
       }
       break;
     }
@@ -307,7 +309,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   }
   let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues, objective_repre);
   console.log("robotSuggestions from util" + robotSuggestions)
-  let final_suggestion = [robotSuggestions.final_suggestion]
+  let final_suggestion: number[] = [robotSuggestions.final_suggestion]  //it was [robotSuggestions.final_suggestion] when it only was one suggestion
   console.log("final suggestion" + final_suggestion)
   let discrepancy_selection = [0.1,0.2,0.4]
   let spatial_reward: number[] = []
@@ -365,9 +367,26 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
 // )
   //
   
+  
 
   let locs;
   locs = final_suggestion;
+  // let locs: number[] = []
+  // let results: PreSample[] = []
+  // //final suggestion seems to not be acting like an array
+  // for(let i = 0; i<final_suggestion.length; i++){
+  //   let loc = final_suggestion[i]
+  //   let suggestion : PreSample  = {
+  //     index: loc,
+  //     type: 'robot',
+  //     measurements: NUM_MEASUREMENTS,
+  //     normOffsetX: sampleLocations[loc][0],
+  //     normOffsetY: sampleLocations[loc][1],
+  //     isHovered: false
+  //   }
+  //   results.push(suggestion)
+  // }
+
   let results : PreSample[] = locs.map((loc) => {
     let suggestion : PreSample = {
       index: loc,
@@ -379,6 +398,9 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     }
     return suggestion;
   });
+
+  
+  
 
   console.log("utils print statement" + {locations, measurements, moistureValues, shearValues, robotSuggestions, results});
   
@@ -434,17 +456,19 @@ function flaskCalculations(locations: number[], measurements: number[], moisture
     shearValues: shearValues,
     objective_repre: objective_repre
   }
-  console.log("objective representation" + objective_repre)
-  console.log("locations" + locations)
+  // console.log("objective representation" + objective_repre)
+  // console.log("locations" + locations)
   return new Promise((resolve, reject) => {
     // fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
     fetch('http://127.0.0.1:5000/process', { //local development URL
       method: 'POST',
-      mode: 'cors',
+      mode: 'cors', //NOTE 4/10 this was just cors before
       cache: 'no-cache',
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'Content-Type': "application/json",
+        'Content-Type': 'application/json, text/plain, */*', //NOTE changed to accept same as accept header instead of only accepting application/json
+        'Access-Control-Allow-Origin': '*/*', //4/10
+        'Access-Control-Allow-Credentials': 'true', //4/10
       },
       body: JSON.stringify(inputs), 
     }).then(
