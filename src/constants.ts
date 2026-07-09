@@ -467,6 +467,114 @@ export const explanationChartOption = {
   }
 };
 
+export const explanationChartBarOption = {
+  type: 'bar',
+  data: {
+    labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13','14','15','16','17','18','19','20', '21','22','23','24','25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38','39','40','41','42','43','44','45','46','47','48','49','50', '51','52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63','64','65','66','67','68','69','70', '71','72','73','74','75', '76', '77', '78', '79', '80', '81', '82', '83', '84', '85', '86', '87', '88','89','90','91','92','93','94','95', '96','97','98','99'],
+    datasets: [
+      {
+        label: 'Coverage',
+        yAxisID: 'reward',
+        data: [0.5, 0.9, 1, .6, .4, .3, .8, .2, .7, .5, .3, .6, .8, .2, .5, .9, .4, .3, .9, .2, 2, .3 ],
+
+        borderColor: 'rgba(128, 0, 128, 1)', // Purple
+        backgroundColor: 'rgba(128, 0, 128, 1)',
+
+      },
+      {
+        label: 'Hypothesis',
+        yAxisID: 'reward',
+        data: [0.3, 0.6, 0.8, 0.3, 0.6, 0.8, 0.3, 0.6, 0.8, 0.3, 0.6, 0.8, 0.3, 0.6, 0.8, 0.3, 0.6, 0.8, 0.3, 0.6, 0.8, .7],
+
+        borderColor: 'rgba(0, 128, 0, 1)', // Green
+        backgroundColor: 'rgba(0, 128, 0, 1)',
+
+      }
+    ]
+  },
+  options: {
+    title: {
+      display: true,
+      text: "Reward Value for Each Objective Across Transect",
+      fontStyle: "bold"
+    },
+    maintainAspectRatio: true,
+    chartArea: { backgroundColor: '#FFF' },
+    // scales: {
+    //         xAxes: [{
+    //             type: 'category',
+    //             labels: ['January', 'February', 'March', 'April', 'May', 'June','January', 'February', 'March', 'April', 'May', 'June','January', 'February', 'March', 'April', 'May', 'June','January', 'February', 'March', 'April', ]
+    //         }]
+    //     },
+    // Enable and customize the legend
+    plugins: {
+      dataLabels:{
+        display: false
+      },
+      legend: {
+        display: true, // Enable legend
+        position: 'top', // 'top', 'bottom', 'left', or 'right'
+        labels: {
+          color: 'black', // Legend text color
+          font: {
+            size: 14 // Legend font size
+          },
+          usePointStyle: true, // Make legend markers circles instead of rectangles
+          boxWidth: 20 // Size of color box in legend
+        }
+      }
+    },
+
+    // elements: {
+    //   point: {
+    //     radius: 0, // Visible points
+    //     hoverRadius: 6,
+    //     borderWidth: 2,
+    //     hoverBorderWidth: 2
+    //   },
+    //   line: {
+    //     tension: 0.3
+    //   }
+    // },
+
+    // Disable animations for immediate updates
+    animation: { duration: 0 },
+    hover: { animationDuration: 0 },
+    responsiveAnimationDuration: 0,
+
+    scales: {
+      yAxes: [{
+        position: 'left',
+        id: 'reward',
+        scaleLabel: {
+          display: true,
+          labelString: 'Reward Value'
+        },
+        ticks: {
+          display: false,
+          min: 0
+          // stepSize: 0.1
+        }
+      }],
+      
+      xAxes: [{
+        type: 'category',
+        position: 'bottom',
+        scaleLabel: {
+          display: true,
+          labelString: 'Transect (category)'
+        },
+        // ticks: {
+        //   display: false,
+        //   min: 0,
+        //   max: 21,
+        //   stepSize: 1
+        // }
+      }]
+    }
+  }
+};
+
 
 export const shearChartOption = {
   type: 'scatter',

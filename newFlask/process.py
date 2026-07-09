@@ -149,9 +149,11 @@ def process():
     print("is instance", isinstance(final_suggestion, np.ndarray))
     #print("type", type(final_suggestion))
     final_suggestion = str(final_suggestion)
+    
     output = {
         'final_type': final_type,
         'final_suggestion': final_suggestion,
+        'final_suggestion_index100': str(final_suggestion_index),
         'suggestion_sets': suggestion_sets.tolist(),
         'info_gaussian': info_gaussian.tolist(),
         'disp_gaussian': disp_gaussian.tolist(),

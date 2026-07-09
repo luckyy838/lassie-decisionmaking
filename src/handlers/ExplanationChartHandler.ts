@@ -1,6 +1,7 @@
 import * as Chart from 'chart.js';
+//import * as BarChart from chart
 import { Action, IState, ExplanationChart } from '../state';
-import { explanationChartOption } from '../constants';
+import { explanationChartOption, explanationChartBarOption} from '../constants';
 import 'chartjs-plugin-annotation';
 
 
@@ -146,36 +147,45 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
       const spatialRewardFormat = spatialReward.map((j,i) => ({x:i, y:j}));
       console.log("formatted spatial reward" + spatialRewardFormat);
 
-      explanationChart.data.datasets[0].data = spatialRewardFormat;
-      
-      
+     
      
 
 
-    //   [
-    //     { x: 0, y: 0.7429797155009306 },
-    //     { x: 1, y: 0.43861608620107184 },
-    //     { x: 2, y: 0.7429797155009306 },
-    //     { x: 3, y: 0.9753345122421678 },
-    //     { x: 4, y: 0.9995038341283518 },
-    //     { x: 5, y: 0.9999979060678188 },
-    //     { x: 6, y: 0.9999979060678188 },
-    //     { x: 7, y: 0.9995038341283518 },
-    //     { x: 8, y: 0.9753345122418252 },
-    //     { x: 9, y: 0.7429797136518924 },
-    //     { x: 10, y: 0.4386139941179287 },
-    //     { x: 11, y: 0.7424835496296249 },
-    //     { x: 12, y: 0.9506690244843357 },
-    //     { x: 13, y: 0.7424835496292823 },
-    //     { x: 14, y: 0.43861399226889053 },
-    //     { x: 15, y: 0.7429776215687494 },
-    //     { x: 16, y: 0.9748383463705196 },
-    //     { x: 17, y: 0.9748383463708622 },
-    //     { x: 18, y: 0.7429776234177874 },
-    //     { x: 19, y: 0.4386160843520337 },
-    //     { x: 20, y: 0.742979715500588 },
-    //     { x: 21, y: 0.9753345122421678 }
-    // ];
+      const testData0 = [
+        { x: 0, y: 0.7429797155009306 },
+        { x: 1, y: 0.43861608620107184 },
+        { x: 2, y: 0.7429797155009306 },
+        { x: 3, y: 0.9753345122421678 },
+        { x: 4, y: 0.9995038341283518 },
+        { x: 5, y: 0.9999979060678188 },
+        { x: 6, y: 0.9999979060678188 },
+        { x: 7, y: 0.9995038341283518 },
+        { x: 8, y: 0.9753345122418252 },
+        { x: 9, y: 0.7429797136518924 },
+        { x: 10, y: 0.4386139941179287 },
+        { x: 11, y: 0.7424835496296249 },
+        { x: 12, y: 0.9506690244843357 },
+        { x: 13, y: 0.7424835496292823 },
+        { x: 14, y: 0.43861399226889053 },
+        { x: 15, y: 0.7429776215687494 },
+        { x: 16, y: 0.9748383463705196 },
+        { x: 17, y: 0.9748383463708622 },
+        { x: 18, y: 0.7429776234177874 },
+        { x: 19, y: 0.4386160843520337 },
+        { x: 20, y: 0.742979715500588 },
+        { x: 21, y: 0.9753345122421678 }
+    ];
+     const testData0bar = [
+        { x: '10', y: 0.6 },
+        { x: '70', y: 0.8 },
+        { x: '55', y: 0.3},
+       
+        
+
+    ]
+     explanationChart.data.datasets[0].data = testData0bar; //NOTE 5/20 used to be spatialRewardFormat
+      
+      console.log("data 0 from explanation chart handler" + explanationChart.data.datasets[0].data) 
    // discrepancy - green
 
    console.log("logging discrepancy reward from explanation chart");
@@ -183,33 +193,54 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
    const discrepancyRewardFormat = discrepancyReward.map((j,i) => ({x:i, y:j}));
       console.log("formatted discrepancy reward" + discrepancyRewardFormat);
 
-    explanationChart.data.datasets[1].data = discrepancyRewardFormat;
-    // [
-    //     { x: 0, y: 0.3154091199969593 },
-    //     { x: 1, y: 0.2838104103438007 },
-    //     { x: 2, y: 0.264149394170256 },
-    //     { x: 3, y: 0.24484835963150375 },
-    //     { x: 4, y: 0.22554732509275158 },
-    //     { x: 5, y: 0.20624629055399937 },
-    //     { x: 6, y: 0.18694525601524728 },
-    //     { x: 7, y: 0.16764422147649513 },
-    //     { x: 8, y: 0.1483431869377429 },
-    //     { x: 9, y: 0.1291622211682804 },
-    //     { x: 10, y: 0.13026312607811671 },
-    //     { x: 11, y: 0.18016271759208138 },
-    //     { x: 12, y: 0.23357978352283973 },
-    //     { x: 13, y: 0.2870782718242321 },
-    //     { x: 14, y: 0.339743653685639 },
-    //     { x: 15, y: 0.3460147117399505 },
-    //     { x: 16, y: 0.34759080041423723 },
-    //     { x: 17, y: 0.34919553274652965 },
-    //     { x: 18, y: 0.35668745798119095 },
-    //     { x: 19, y: 0.36725129317627575 },
-    //     { x: 20, y: 0.37752276015714054 },
-    //     { x: 21, y: 0.3805363782074797 }
+    const testData1 = [
+        { x: 0, y: 0.3154091199969593 },
+        { x: 1, y: 0.2838104103438007 },
+        { x: 2, y: 0.264149394170256 },
+        { x: 3, y: 0.24484835963150375 },
+        { x: 4, y: 0.22554732509275158 },
+        { x: 5, y: 0.20624629055399937 },
+        { x: 6, y: 0.18694525601524728 },
+        { x: 7, y: 0.16764422147649513 },
+        { x: 8, y: 0.1483431869377429 },
+        { x: 9, y: 0.1291622211682804 },
+        { x: 10, y: 0.13026312607811671 },
+        { x: 11, y: 0.18016271759208138 },
+        { x: 12, y: 0.23357978352283973 },
+        { x: 13, y: 0.2870782718242321 },
+        { x: 14, y: 0.339743653685639 },
+        { x: 15, y: 0.3460147117399505 },
+        { x: 16, y: 0.34759080041423723 },
+        { x: 17, y: 0.34919553274652965 },
+        { x: 18, y: 0.35668745798119095 },
+        { x: 19, y: 0.36725129317627575 },
+        { x: 20, y: 0.37752276015714054 },
+        { x: 21, y: 0.3805363782074797 }
 
-    // ]
+    ]
+
     ;
+
+    const testData1bar = [
+        { x: '10', y: 0.3154091199969593 },
+        { x: '70', y: 0.2838104103438007 },
+        { x: '55', y: 0.264149394170256 },
+       
+        
+
+    ]
+
+   // explanationChart.data.datasets[1].data = testData1bar
+    //now to create the bar chart data, which will depend on robot suggestions 
+    //DISCRETE EXPLANATION data for chart
+    robotSuggestions.forEach((s,k) => console.log("s.index" + s.index + "s."));
+    console.log("is robotSuggestions an array? " + Array.isArray(robotSuggestions))
+    console.log("is robot suggestions[0] a thing? " + robotSuggestions[0])
+    const suggestionIndex = Array.isArray(robotSuggestions) && robotSuggestions[0] ? robotSuggestions[0].index : 0;
+    const discrepancyRewardAtIndex = discrepancyReward[suggestionIndex];
+    console.log("suggestionIndex" + suggestionIndex + "reward at index" + discrepancyRewardAtIndex)
+    explanationChart.data.datasets[1].data = [{ x: suggestionIndex.toString, y: discrepancyRewardAtIndex}]; //NOTE 5/20 used to be discrepancyRewardFormat
+    console.log("data test" + explanationChart.data.datasets[1].data)
 
     const dynamicHighlights = Array.isArray(robotSuggestions)
   ? robotSuggestions.map((s, k) => (
@@ -222,7 +253,7 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     }))
   : [];
 
-setHighlights(explanationChart, dynamicHighlights);
+//setHighlights(explanationChart, dynamicHighlights); NOTE 5/20 uncomment later
      
     } else {
       //console.log("chart.shearChart undefined");
@@ -291,7 +322,7 @@ export const initializeExplanationChart = (globalState: IState, dispatch: any) :
 
   
       if (explanationCtx) {
-        explanationChart = new Chart(explanationCtx, explanationChartOption as any);
+        explanationChart = new Chart(explanationCtx, explanationChartBarOption as any); //add or here for randomization
       }
     }
 
@@ -300,13 +331,14 @@ export const initializeExplanationChart = (globalState: IState, dispatch: any) :
 if (!(explanationChart.options as any).scales.xAxes[0]) {
   (explanationChart.options as any).scales.xAxes[0] = { id: 'x-axis-0' };
 }
-(explanationChart.options as any).scales.xAxes[0].type = 'linear';
-(explanationChart.options as any).scales.xAxes[0].ticks = {
-  ...(explanationChart.options as any).scales.xAxes[0].ticks,
-  min: 0,
-  max: 99,
-  padding: 10
-};
+//(explanationChart.options as any).scales.xAxes[0].type = 'linear'; //5/20 NOTE Commented to test 
+
+// (explanationChart.options as any).scales.xAxes[0].ticks = {
+//   ...(explanationChart.options as any).scales.xAxes[0].ticks,
+//   min: 0,
+//   max: 99,
+//   padding: 10
+// };// 5/20 NOTE  uncomment for line chart
 
 // Optional: y range you expect
 // (explanationChart.options as any).scales.yAxes = (explanationChart.options as any).scales.yAxes || [{}];
@@ -333,17 +365,17 @@ const initialHighlights = Array.isArray(robotSuggestions) && robotSuggestions.le
       { index: 15, label: 'Peak',   lineColor: '#000', lineWidth: 2, insideLabel: 'Peak' }
     ];
 
-setHighlights(explanationChart, initialHighlights);
-    explanationChart.data.datasets[0].data = [{
-        x: 10,
-        y: 0.6
-    }, {
-        x: 15,
-        y: 0.8
-    }, {
-        x: 5,
-        y: 0.3
-    }];
+//setHighlights(explanationChart, initialHighlights); //5/20 NOTE uncomment for highlights again
+    // explanationChart.data.datasets[0].data = [{
+    //     x: 10,
+    //     y: 0.6
+    // }, {
+    //     x: 15,
+    //     y: 0.8
+    // }, {
+    //     x: 5,
+    //     y: 0.3
+    // }]; NOTE 5/20 uncomment
 
   
     // if (document.getElementById('shearChartMap')) {

@@ -698,7 +698,7 @@ const tutorial4 =
 
             let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
             
-            const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
+            const { results, spatialReward, variableReward, discrepancyReward } = robotResults; //5/21 NOTE pick up back here if u want to add index100 to state and explanation chart
             console.log("logged spatial reward from decision at objective case where it's not free response");
             console.log(spatialReward);
             dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });

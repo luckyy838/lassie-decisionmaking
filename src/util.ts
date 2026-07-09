@@ -311,6 +311,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   console.log("robotSuggestions from util" + robotSuggestions)
   let final_suggestion: number[] = [robotSuggestions.final_suggestion]  //it was [robotSuggestions.final_suggestion] when it only was one suggestion
   console.log("final suggestion" + final_suggestion)
+  let final_suggestion100: number[] = [robotSuggestions.final_suggestion_index100]
   let discrepancy_selection = [0.1,0.2,0.4]
   let spatial_reward: number[] = []
   let variable_reward = []
@@ -406,6 +407,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   
   return {
     results: results,
+    index100: final_suggestion100,
     spatialReward: spatial_reward,
     variableReward: variable_reward,
     discrepancyReward: discrepancy_reward
