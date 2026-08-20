@@ -15,7 +15,7 @@ import ClickableImage from '../components/ClickableImage';
 import { ConfirmDialog, MultiStepDialog } from '../components/Dialogs';
 import { getMeasurements, calculateRobotSuggestions } from '../util';
 import {
-  PopboxTypeEnum, confidenceTexts, resolutionTexts, NUM_OF_HYPOS,
+  PopboxTypeEnum, resolutionTexts, NUM_OF_HYPOS,
   UserFeedbackState, objectiveOptions, transitionOptions,
 } from '../constants';
 import { useStateValue, Action } from '../state';
@@ -59,7 +59,7 @@ export default function Main() {
   const { step, userFeedbackState, objectives, objectiveFreeResponse, sampleType,
     robotSuggestions, spatialReward, variableReward, discrepancyReward, acceptOrRejectOptions, acceptOrReject, 
     rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, acceptExplanationRating, rejectExplanationRating,
-    hypoConfidence, resolutionMethod, transition } = currUserStep;
+    resolutionMethod, transition } = currUserStep;
 
   const history = useHistory();
 
@@ -140,7 +140,6 @@ export default function Main() {
       userFreeSample: userSample,
       acceptExplanationRating: acceptExplanationRating,
       rejectExplanationRating: 0,
-      hypoConfidence: confidenceTexts[hypoConfidence + 3],
       resolutionMethod: resolutionTexts[resolutionMethod],
       samples: JSON.parse(JSON.stringify(samples)),
       transition: transitionOptions[transitionAdj],
@@ -171,10 +170,6 @@ export default function Main() {
     history.push('/conclusion');
     console.log({globalState});
   };
-  const handleHypoResponse = (value: any) => {
-    dispatch({ type: Action.SET_HYPO_CONFIDENCE, value: value });
-  }
-
   // Disable submit button if the user has selected no objectives during the OBJECTIVE step
   useEffect(() => {
     if (userFeedbackState === UserFeedbackState.OBJECTIVE) {
@@ -186,7 +181,7 @@ export default function Main() {
   // In the RANK_OBJECTIVES step, automatically disable the submit button until the user fills out a valid set of rankings for each selected objective
   // Example of set two group of user input buttons 6/12/2022
   useEffect(() => {
-    if (userFeedbackState === UserFeedbackState.RANK_OBJECTIVES || userFeedbackState === UserFeedbackState.HYPOTHESIS_CONFIDENCE) {
+    if (userFeedbackState === UserFeedbackState.RANK_OBJECTIVES || userFeedbackState === UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS) {
 
       let objectivesRankings : number[] = [];
       let disable = false;
@@ -533,44 +528,6 @@ const onObjectiveTextChange = e => {
     }}/>
   </div>
   
-  const updateHypothesisConfidence = 
-  <div className="optional-updates">
-    <div className="update-hypothesis-confidence">
-      <div className="hypothesisBlock">
-          <div className="hypothesisTitle"><strong>Updated Hypothesis Confidence</strong></div>
-          <div className="hypothesisText">
-            <div>
-            Your current hypothesis confidence is selected below. If it has changed, please provide a new selection of your certainty that the <span style={{color: 'blue', textDecorationLine: 'underline', cursor: 'pointer'}}><strong><a onClick={() => setHypothesisOpen(true)}>hypothesis</a></strong></span> will be supported or refuted. 
-            </div>
-          </div>
-          {/* style={{border: '2.5px solid red', animation: 'blinker 2s linear infinite'}} */}
-          <FormControl>
-              <Select
-                  style={{fontSize: '1.5vh'}}
-                  value={hypoConfidence + 3}
-                  onChange={event => {
-                    handleHypoResponse(Number(event.target.value) - 3);
-                    dispatch({type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false});
-                    }}>
-                  {
-                      confidenceTexts.map((text, i) => (<MenuItem key={i} value={i}>{text}</MenuItem>))
-                  }
-              </Select>
-          </FormControl>
-      </div>
-    </div>
-
-    {/* <div className="objectiveRankingTitle"><strong>Update Objective Rankings</strong></div>
-
-
-    {updateObjectiveRankings}
-
-    <div className="resolutionMethodTitle"><strong>Update Resolution Method</strong></div>
-
-    {updateResolutionMethod} */}
-
-  </div>
-
   const transitionQuestions = 
     <div className="reject-reason-questions"> 
       <p><strong>What would you like to do next?</strong></p>
@@ -645,7 +602,6 @@ const tutorial4 =
     rejectReasonQuestions,
     rejectReasonFreeResponseQuestion,
     userLocationSelectionQuestion,
-    updateHypothesisConfidence,
     updateObjectiveRankings,
     updateResolutionMethod,
     transitionQuestions,
@@ -800,7 +756,7 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.EXPLANATION_QUESTION: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.HYPOTHESIS_CONFIDENCE });
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
         return;
       }
       // Select the reason why the use reject their belefs
@@ -833,23 +789,9 @@ const tutorial4 =
         dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
         dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 }); // load the next Sample into the charts and strategy 
         dispatch({ type: Action.SET_SAMPLE_TYPE, value: 'user'});
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.HYPOTHESIS_CONFIDENCE });
-       // dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true }); // Disable update hypothesis confidence button unless the user made a selection. by Zeyu 7/7/2022
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
         console.log({globalState}); // for debugging
         return;
-      }
-      //LUCKY deleted transition link altogether 
-      // case UserFeedbackState.HYPOTHESIS_CONFIDENCE: {
-      //   dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TRANSITION });
-      //   dispatch({ type: Action.SET_TRANSITION, value: userFreeSelection ? 0 : 0 }); // Add this for transition adjustment by Zeyu 5/18/2022
-      //   console.log({globalState}); // for debugging
-      //   return;
-
-      // }
-      case UserFeedbackState.HYPOTHESIS_CONFIDENCE: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
-        return;
-
       }
       case UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS: {
         dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_RES_METHOD});

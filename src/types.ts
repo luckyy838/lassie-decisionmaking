@@ -81,7 +81,6 @@ export interface CurrUserStepData {
   userSample: Sample | null,
   acceptExplanationRating: number, //0-100
   rejectExplanationRating: number,
-  hypoConfidence : number, // stores user's updated hypothesis confidence,
   resolutionMethod: number,
   transition : number, // stores user's choice for the next data collection step
 }
@@ -102,7 +101,6 @@ export interface UserStepsData {
   userFreeSample: Sample | null,
   acceptExplanationRating: number,
   rejectExplanationRating: number,
-  hypoConfidence : string,
   resolutionMethod: string, 
   samples: Sample[],
   transition : string,

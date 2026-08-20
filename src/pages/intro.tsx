@@ -262,7 +262,6 @@ export default function Intro(props) {
                                         type: Action.SET_INIT_HYPO_CONFIDENCE, 
                                         value: Number(event.target.value)-3 
                                     });
-                                    dispatch({ type: Action.SET_HYPO_CONFIDENCE, value: Number(event.target.value)-3});
                                     //handleResponse(Number(event.target.value)-3);
                                     onNextFreeResponse(Number(event.target.value)-3);
                                 }}>

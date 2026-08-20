@@ -109,7 +109,6 @@ export const initialState : IState = {
     userSample: null,
     acceptExplanationRating: 0,
     rejectExplanationRating: 0,
-    hypoConfidence: 0,
     resolutionMethod: 0,
     transition: 0, // previous: 0 Set the option from 0 to 1 by default. - Zeyu, 5/17/2022
   },
@@ -178,7 +177,6 @@ export enum Action {
     SET_USER_SAMPLE,
     SET_ACCEPT_EXPLANATION_RATING,
     SET_REJECT_EXPLANATION_RATING,
-    SET_HYPO_CONFIDENCE,
     SET_RES_METHOD,
     SET_TRANSITION,
     SET_DISABLE_SUBMIT_BUTTON,
@@ -293,7 +291,6 @@ const actionKeyMapCurrUserStep : ActionKeyMapCurrUserStep = {
   [Action.SET_USER_SAMPLE]: 'userSample',
   [Action.SET_ACCEPT_EXPLANATION_RATING]: 'acceptExplanationRating',
   [Action.SET_REJECT_EXPLANATION_RATING]: 'rejectExplanationRating',
-  [Action.SET_HYPO_CONFIDENCE]: 'hypoConfidence',
   [Action.SET_RES_METHOD]: 'resolutionMethod',
   [Action.SET_TRANSITION]: 'transition',
 };
