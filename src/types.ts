@@ -56,7 +56,6 @@ export interface DataVersion {
 export interface Objective {
   objective: string, // stores objective(s) for each data collection step
   ranking: number, // stores priority ranking for each objective
-  addressedRating: number // stores user's rating for how well the latest sample addresses the current objective
 }
 
 /** Interface for current user step */
@@ -79,7 +78,6 @@ export interface CurrUserStepData {
   rejectReasonFreeResponse: string, // stores user's free response for the reason for rejecting the robot's suggestion
   userFreeSelection: boolean
   userSample: Sample | null,
-  acceptExplanationRating: number, //0-100
   rejectExplanationRating: number,
   resolutionMethod: number,
   transition : number, // stores user's choice for the next data collection step
@@ -99,7 +97,6 @@ export interface UserStepsData {
   rejectReasonsOptions: string[],
   rejectReasonFreeResponse: string | null, 
   userFreeSample: Sample | null,
-  acceptExplanationRating: number,
   rejectExplanationRating: number,
   resolutionMethod: string, 
   samples: Sample[],

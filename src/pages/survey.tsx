@@ -7,7 +7,6 @@ import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupHorizontal from '../components/RadioButtonGroupHorizontal';
 import RankedScale from '../components/RankedScale';
 import { QuestionType, SurveyQuestion, surveyQuestions as rawSurveyQuestions, TextAreaType } from '../data/surveyQuestions';
-import { confidenceTexts, initialConfidenceTexts } from '../constants';
 import '../styles/survey.scss';
 import { MultiStepDialog } from '../components/Dialogs';
 import ReactHtmlParser from 'react-html-parser'
@@ -339,7 +338,7 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 
 export default function Survey() {
     const [globalState, dispatch] = useStateValue();
-    const { dataVersion, initialHypo, finalHypo, conclusionFreeResponse, samples, userSteps } = globalState;
+    const { dataVersion, conclusionFreeResponse, samples, userSteps } = globalState;
     const [page, setPage] = useState(0);
     const [answers, setAnswers] = useState({} as SurveyAnswers);
     const setAnswer = (id: string, answer: string) => {
@@ -353,8 +352,6 @@ export default function Survey() {
     const saveLogs = surveyOutput => {
         const log = {
             dataVersion: dataVersion,
-            initialHypo: initialConfidenceTexts[initialHypo + 3],
-            finalHypo: confidenceTexts[finalHypo + 3],
             conclusionFreeResponse: conclusionFreeResponse,
             userSteps: userSteps,
             surveyResponses: surveyOutput

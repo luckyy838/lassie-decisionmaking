@@ -8,43 +8,23 @@ import ConsentPanel from '../components/ConsentPanel';
 import ProgressBar from '../components/ProgressBar';
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import { useStateValue, Action } from '../state';
-import { initialConfidenceTexts, resolutionTexts } from '../constants';
+import { resolutionTexts } from '../constants';
 import "../styles/intro.scss";
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import Radio from '@material-ui/core/Radio';
-import RadioGroup from '@material-ui/core/RadioGroup';
 import RadioButtonGroup from '../components/RadioButtonGroup';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import FormLabel from '@material-ui/core/FormLabel';
-import { styled } from '@material-ui/core/styles';
-import { isNumber } from "lodash";
 const robotDesertGif = require('../../assets/robot_desert_horizontal.gif');
 const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
 const competingLocalHypo = require('../../assets/CompetingLocalHypo.png');
 
-const CustomFormControlLabel = styled(FormControlLabel)({
-    '& .MuiFormControlLabel-label': {
-        color: 'black',
-        fontSize: '13px',
-        fontFamily: 'Helvetic'
-    },
-    '& .MuiRadio-root': {
-        color: 'black',
-    },
-}); 
-
 export default function Intro(props) {
     const history = useHistory();
     const [globalState, dispatch] = useStateValue();
-    const { initialHypo, initialResolutionMethod } = globalState;
+    const { initialResolutionMethod } = globalState;
     const [currentPage, setCurrentPage] = useState(0);
     const [animationDirection, setAnimationDirection] = useState("Right");
     const pageCount = 2; // Updated page count to 3
 
     const [disable, setDisable] = useState(true);
-    const [nextDisable, setNextDisablee] = useState(true);
+    const [nextDisable, setNextDisablee] = useState(false);
 
     // Define objectives state
     const [objectives, setObjectives] = useState([
@@ -82,10 +62,6 @@ export default function Intro(props) {
         }
     }
 
-    function onNextFreeResponse(e) {
-        if (isNumber(e)) setNextDisablee(isNumber(e) ? false : true);
-    }
-
     const buttonRow = (
         <div className="buttonRow">
             {
@@ -94,14 +70,6 @@ export default function Intro(props) {
             <Button disabled={nextDisable} onClick={onNextClick} color='primary' variant='contained' className="buttonRowButton">Next</Button>
         </div>
     );
-
-    const handleResponse = (value: any) => {
-        dispatch({ 
-            type: Action.SET_INIT_HYPO_CONFIDENCE, 
-            value: value 
-        });
-    }
-
 
     const combinedQuestions = (
         <div className="introCard">
@@ -246,30 +214,6 @@ export default function Intro(props) {
                             Soil strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), 
                             at which point strength will be constant as moisture continues to increase (see blue line).
                         </p>
-                    </div>
-
-                    <div className="hypothesisBlock">
-                        <div className="hypothesisTitle"><strong>Initial Hypothesis Confidence</strong></div>
-                        <div className="hypothesisText">
-                            Provide a ranking of your initial certainty that this hypothesis will be supported or refuted. If you have no initial preference, simply select "I am unsure":
-                        </div>
-                        <FormControl style={{border: '2.5px solid red', animation: 'blinker 2s linear infinite'}}>
-                            <Select
-                                style={{fontSize: '1.5vh'}}
-                                value={initialHypo + 3}
-                                onChange={event => {
-                                    dispatch({ 
-                                        type: Action.SET_INIT_HYPO_CONFIDENCE, 
-                                        value: Number(event.target.value)-3 
-                                    });
-                                    //handleResponse(Number(event.target.value)-3);
-                                    onNextFreeResponse(Number(event.target.value)-3);
-                                }}>
-                                {
-                                    initialConfidenceTexts.map((text, i) => (<MenuItem key={i} value={i}>{text}</MenuItem>))
-                                }
-                            </Select>
-                        </FormControl>
                     </div>
                 </div>
             </div>

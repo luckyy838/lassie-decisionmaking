@@ -9,7 +9,7 @@ import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid';
 
 import HelpIcon from '@material-ui/icons/Help';
-import { FormControl, Select, MenuItem, CircularProgress, Box, Slider } from '@material-ui/core';
+import { FormControl, Select, MenuItem, CircularProgress } from '@material-ui/core';
 import Popbox from '../components/Popbox';
 import ClickableImage from '../components/ClickableImage';
 import { ConfirmDialog, MultiStepDialog } from '../components/Dialogs';
@@ -58,7 +58,7 @@ export default function Main() {
 
   const { step, userFeedbackState, objectives, objectiveFreeResponse, sampleType,
     robotSuggestions, spatialReward, variableReward, discrepancyReward, acceptOrRejectOptions, acceptOrReject, 
-    rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, acceptExplanationRating, rejectExplanationRating,
+    rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, rejectExplanationRating,
     resolutionMethod, transition } = currUserStep;
 
   const history = useHistory();
@@ -138,7 +138,6 @@ export default function Main() {
       rejectReasonsOptions: rejectReasonsOptions, //Add new change
       rejectReasonFreeResponse: rejectReasonFreeResponse,
       userFreeSample: userSample,
-      acceptExplanationRating: acceptExplanationRating,
       rejectExplanationRating: 0,
       resolutionMethod: resolutionTexts[resolutionMethod],
       samples: JSON.parse(JSON.stringify(samples)),
@@ -248,7 +247,6 @@ export default function Main() {
           let newObjective = {
             objective: objectiveOptions[i],
             ranking: -1,
-            addressedRating: 1
           };
           objectivesTemp.push(newObjective);
         }
@@ -338,108 +336,6 @@ const onObjectiveTextChange = e => {
         dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
       }}/>
     </div>
-
-  // Handler for setting the user's rating for how well the latest sample addressed the current objective
-  const handleSliderChange = (event, newValue, index) => {
-    if (typeof newValue === 'number') {
-      let objectivesTemp = [...objectives];
-      objectivesTemp[index].addressedRating = newValue / 20 + 1;
-      dispatch({ type: Action.SET_OBJECTIVES, value: objectivesTemp });
-    }
-  }
-
-  const marks = [
-    { value: 0, label: '1-Unsure' },
-    { value: 20, label: ['2-Did Not', <br/>, 'Address'] },
-    { value: 40, label: ['3-Barely', <br/>, 'Addressed'] },
-    { value: 60, label: ['4-Somewhat', <br/>, 'Addressed'] },
-    { value: 80, label: '5-Addressed' },
-    { value: 100, label: ['6-Definitely', <br/>, 'Addressed'] },
-  ];
-
-  const explanationMarks = [
-    { value: 0, label: '1-Unsure' },
-    { value: 20, label: ['2-Did Not', <br/>, 'Help'] },
-    { value: 40, label: ['3-Barely', <br/>, 'Helped'] },
-    { value: 60, label: ['4-Somewhat', <br/>, 'Helped'] },
-    { value: 80, label: '5-Helped' },
-    { value: 100, label: ['6-Definitely', <br/>, 'Helped'] },
-  ];
-
-  function valueLabelFormat(value) {
-    return marks.findIndex((mark) => mark.value === value) + 1;
-  }
-
-  //TODO: do the same as when presenting objectives for ranking, i.e. make them in order and say "your primary/secondary objective"
-  //TODO: make these go one at a time so that i reduce the need to scroll down as much as possible. the alternative is to make it more obvious that you need to scroll
-  const acceptFollowUpQuestions = 
-    <div className="accept-follow-up-questions">
-      <p><strong>How well did the robot-suggested locations address each of the objectives? Please provide a rating for each belief you have selected previously:</strong></p>
-      { objectives.map((obj, index) => (
-        <div key={obj.objective.slice(0, 10) + index}>
-          <p><i><strong>Please provide your rating for your selected Belief #{index + 1}:</strong> {obj.objective}</i></p>
-          <div className="slider-box">
-            <Box>
-              <Slider
-                aria-label="Restricted values"
-                value={(obj.addressedRating - 1) * 20}
-                valueLabelFormat={valueLabelFormat}
-                valueLabelDisplay="auto"
-                step={20}
-                marks={marks}
-                onChange={(event, value) => handleSliderChange(event, value, index)}
-              />
-            </Box>
-          </div>
-        </div>
-      ))}
-
-
-          {/* <p><i><strong>How much did the visual explanation provided for the robot's suggestions positively influence your decision to accept?</strong></i></p>
-          <div className="slider-box">
-            <Box>
-              <Slider
-                aria-label="Restricted values"
-                value={acceptExplanationRating}
-                valueLabelFormat={valueLabelFormat}
-                valueLabelDisplay="auto"
-                step={20}
-                marks={explanationMarks}
-                onChange={(event, v) => {
-                  dispatch({ type: Action.SET_ACCEPT_EXPLANATION_RATING, value: v });
-
-                }}
-              />
-            </Box>
-          </div> */}
-        
-    </div>  
-
-
-    //TODO actually make this into multiple questions 
-    const explanationQuestion = 
-    <div>
-        <p><i><strong>How much did the visual explanation provided for the robot's suggestions <u>positively influence</u> your decision to accept?</strong></i></p>
-          <div className="slider-box">
-            <Box>
-              <Slider
-                aria-label="Restricted values"
-                value={acceptExplanationRating}
-                valueLabelFormat={valueLabelFormat}
-                valueLabelDisplay="auto"
-                step={20}
-                marks={explanationMarks}
-                onChange={(event, v) => {
-                  dispatch({ type: Action.SET_ACCEPT_EXPLANATION_RATING, value: v });
-
-                }}
-              />
-            </Box>
-          </div>
-    </div>
-
-    
-    
 
 // Apply new changes by Zeyu 6/21/2022
   useEffect(() => {
@@ -597,8 +493,6 @@ const tutorial4 =
     resMethod,
     objectiveFreeResponseQuestion,
     acceptOrRejectQuestions,
-    acceptFollowUpQuestions,
-    explanationQuestion,
     rejectReasonQuestions,
     rejectReasonFreeResponseQuestion,
     userLocationSelectionQuestion,
@@ -741,22 +635,13 @@ const tutorial4 =
           const { shearValues, moistureValues } = getMeasurements(globalState, transectIdx, robotSample.index, robotSample.measurements);
           let newSample : Sample = {...robotSample, shear: shearValues, moisture: moistureValues};
           dispatch({ type: Action.ADD_SAMPLE, value: newSample }); // add the new sample to the StateContext
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_FOLLOW_UP });
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
           dispatch({ type: Action.SET_SAMPLE_TYPE, value: 'robot'});
         } else {
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.REJECT_REASON });
         }
         dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: false });
         console.log({globalState}); // for debugging
-        return;
-      }
-      case UserFeedbackState.ACCEPT_FOLLOW_UP: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.EXPLANATION_QUESTION});
-        //dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true }); // Disable update hypothesis confidence button unless the user made a selection. by Zeyu 7/7/2022
-        return;
-      }
-      case UserFeedbackState.EXPLANATION_QUESTION: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
         return;
       }
       // Select the reason why the use reject their belefs

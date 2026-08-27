@@ -963,8 +963,6 @@ export enum UserFeedbackState {
   RES_METHOD,
   OBJECTIVE_FREE_RESPONSE,
   ACCEPT_OR_REJECT_SUGGESTION,
-  ACCEPT_FOLLOW_UP,
-  EXPLANATION_QUESTION,
   REJECT_REASON,
   REJECT_REASON_FREE_RESPONSE,
   USER_LOCATION_SELECTION, //TODO: remove this?
@@ -979,15 +977,6 @@ export const objectiveOptions = [
   "HYPOTHESIS There are areas that require more data to evaluate the hypothesis", // Option 1 - hypo invalidating algorithm -- changed to general hypothesis evaluation
   //"The data seems to be supporting the hypothesis so far but additional evaluation is needed", // Option 3 old - hypo validating algorithm
   // "I hold a different belief that is not described here" // Option 2 - free response
-]
-
-export const acceptFollowUpOptions = [
-  "Definitely addressed the belief", 
-  "Moderately addressed the belief",
-  "Somewhat addressed the belief",
-  "Barely addressed the belief",
-  "Did not address the belief",
-  "I am unsure",
 ]
 
 export const transitionOptions = [

@@ -43,9 +43,6 @@ export interface IState {
   samples: Sample[] // will be in final output after survey is completed
   currUserStep: CurrUserStepData,
   userSteps: UserStepsData[], // will be in final output after survey is completed
-  // Hypothesis fields
-  initialHypo: number, // will be in final output after survey is completed
-  finalHypo: number, // will be in final output after survey is completed
   conclusionFreeResponse: string,
    //LUCKY resolution method
   initialResolutionMethod: number,
@@ -85,12 +82,10 @@ export const initialState : IState = {
     objectives: [{
       objective: objectiveOptions[0],
       ranking: 1,
-      addressedRating: 1
     },
     {
       objective: objectiveOptions[1],
       ranking: 2,
-      addressedRating: 1
     }],
     objectiveFreeResponse: "",
     sampleType: null,
@@ -107,14 +102,11 @@ export const initialState : IState = {
     rejectReasonFreeResponse: "",
     userFreeSelection: false,
     userSample: null,
-    acceptExplanationRating: 0,
     rejectExplanationRating: 0,
     resolutionMethod: 0,
     transition: 0, // previous: 0 Set the option from 0 to 1 by default. - Zeyu, 5/17/2022
   },
   userSteps: [],
-  initialHypo: 0,
-  finalHypo: 0,
   conclusionFreeResponse: "", //Add by Zeyu 6/13/2022
   initialResolutionMethod: 0,
   chart: null,
@@ -175,15 +167,12 @@ export enum Action {
     SET_REJECT_REASON_FREE_RESPONSE,
     SET_USER_FREE_SELECTION,
     SET_USER_SAMPLE,
-    SET_ACCEPT_EXPLANATION_RATING,
     SET_REJECT_EXPLANATION_RATING,
     SET_RES_METHOD,
     SET_TRANSITION,
     SET_DISABLE_SUBMIT_BUTTON,
     SET_NUM_SUBMIT_CLICKS,
     /** FINISH */
-    SET_INIT_HYPO_CONFIDENCE,
-    SET_FINAL_HYPO_CONFIDENCE,
     SET_CONCLUSION_FREE_RESPONSE,
     SET_INITIAL_RESOLUTION_METHOD,
     SET_SELECTED_POINT_FROM_CHART,
@@ -214,8 +203,6 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_CURR_SAMPLE_IDX]: 'currSampleIdx',
   [Action.SET_SAMPLES]: 'samples',
   [Action.SET_CURR_USER_STEP]: 'currUserStep',
-  [Action.SET_INIT_HYPO_CONFIDENCE]: 'initialHypo',
-  [Action.SET_FINAL_HYPO_CONFIDENCE]: 'finalHypo',
   [Action.SET_CONCLUSION_FREE_RESPONSE]: 'conclusionFreeResponse',
   [Action.SET_INITIAL_RESOLUTION_METHOD]:'initialResolutionMethod',
   [Action.SET_CHART]: 'chart',
@@ -289,7 +276,6 @@ const actionKeyMapCurrUserStep : ActionKeyMapCurrUserStep = {
   [Action.SET_REJECT_REASON_FREE_RESPONSE]: 'rejectReasonFreeResponse',
   [Action.SET_USER_FREE_SELECTION]: 'userFreeSelection',
   [Action.SET_USER_SAMPLE]: 'userSample',
-  [Action.SET_ACCEPT_EXPLANATION_RATING]: 'acceptExplanationRating',
   [Action.SET_REJECT_EXPLANATION_RATING]: 'rejectExplanationRating',
   [Action.SET_RES_METHOD]: 'resolutionMethod',
   [Action.SET_TRANSITION]: 'transition',

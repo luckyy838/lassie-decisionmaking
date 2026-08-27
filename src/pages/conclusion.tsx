@@ -4,16 +4,12 @@ import TextField from '@material-ui/core/TextField';
 import { useHistory } from 'react-router-dom';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import { useStateValue, Action } from '../state';
 import '../styles/conclusion.scss';
 import ChartPanel from '../components/ChartPanel';
 import { initializeCharts, updateCharts } from '../handlers/ChartHandler';
-import { confidenceTexts } from '../constants';
 import '../styles/survey.scss';
 
 const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
@@ -23,7 +19,7 @@ export default function Conclusion() {
   const [globalState, dispatch] = useStateValue();
   const [coordText, setCoordText] = useState('');
 
-  const { finalHypo, conclusionFreeResponse } = globalState;
+  const { conclusionFreeResponse } = globalState;
 
   // State for navigating between parts
   const [showSecondPart, setShowSecondPart] = useState(false);
@@ -42,10 +38,6 @@ export default function Conclusion() {
 
   const onConclusionFreeResponse = (e) => {
     dispatch({ type: Action.SET_CONCLUSION_FREE_RESPONSE, value: e.target.value });
-  };
-
-  const handleResponse = (value: any) => {
-    dispatch({ type: Action.SET_FINAL_HYPO_CONFIDENCE, value: value });
   };
 
   const onContinueClick = () => {
@@ -93,39 +85,6 @@ export default function Conclusion() {
                     increases until sand is saturated (somewhere along the stoss slope), at which point strength will 
                     be constant as moisture continues to increase (see blue line).
                   </p>
-                </div>
-
-                <div className="hypothesisBlock">
-                  <div className="hypothesisTitle" style={{ marginTop: '1px' }}>
-                    <strong>Final Hypothesis Confidence</strong>
-                  </div>
-                  <div className="hypothesisText">
-                    Provide a final ranking of your certainty that the hypothesis has been supported or refuted:
-                  </div>
-
-                  <FormControl style={{ border: '2.5px solid red', animation: 'blinker 2s linear infinite' }}>
-                    <Select
-                      style={{ fontSize: '1.5vh' }}
-                      value={finalHypo + 3}
-                      onChange={event => handleResponse(Number(event.target.value) - 3)}
-                    >
-                      {confidenceTexts.map((text, i) => (
-                        <MenuItem key={i} value={i}>{text}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  {/* <div className="hypothesisTitle" style={{ marginTop: '2.5%' }}>
-                    <strong>Explain your reasoning for making this judgment about the hypothesis</strong>
-                  </div>
-                  <textarea
-                    style={{
-                      marginTop: '1%', marginBottom: '1%', width: '100%', height: '40%', 
-                      padding: '5px', outline: 'none', border: 'solid 1px gray'
-                    }}
-                    placeholder="Type N/A, if not applicable."
-                    onChange={e => { onConclusionFreeResponse(e); handleChange(e); }}
-                  ></textarea> */}
                 </div>
 
                 <div className="confirmButtonContainer">
