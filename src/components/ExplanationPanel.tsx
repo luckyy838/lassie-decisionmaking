@@ -1,16 +1,16 @@
 import * as React from 'react';
-import { useEffect, useState} from 'react';
-import * as Chart from 'chart.js';
+import { useEffect, useRef } from 'react';
 import { useStateValue, Action } from '../state';
-import { initializeExplanationChart, updateExplanationChart } from '../handlers/ExplanationChartHandler';
+import { initializeExplanationChart, updateExplanationChart, applyExplanationChartLayout } from '../handlers/ExplanationChartHandler';
 import '../styles/explanationPanel.scss';
-import { relative } from 'path';
 
 //TODO: add in modes to switch between types of charts
 
 export default function ExplanationChartPanel() {
   const [globalState, dispatch] = useStateValue();
-  const { explanationChartSettings } = globalState;
+  const { explanationChartSettings, explanationChart } = globalState;
+  const explanationChartRef = useRef(explanationChart);
+  explanationChartRef.current = explanationChart;
   //const [currentTab, setCurrentTab] = useState(0);
   //const [showOptions, setShowOptions] = useState(false); //?????
   //const [displayOption, setDisplayOption] = useState(chartSettings.mode);
@@ -26,6 +26,36 @@ export default function ExplanationChartPanel() {
       initializeExplanationChart(globalState, dispatch);
       updateExplanationChart(globalState, dispatch);
   }, [explanationChartSettings]);
+
+  useEffect(() => {
+    const parent = document.getElementById('explanationChartParent');
+    if (!parent) {
+      return;
+    }
+    let debounceId: any = null;
+    const fit = () => {
+      if (debounceId) {
+        window.clearTimeout(debounceId);
+      }
+      debounceId = window.setTimeout(() => {
+        applyExplanationChartLayout(explanationChartRef.current);
+      }, 280);
+    };
+    const observer = typeof (window as any).ResizeObserver !== 'undefined'
+      ? new (window as any).ResizeObserver(fit)
+      : null;
+    if (observer) {
+      observer.observe(parent);
+    }
+    return () => {
+      if (debounceId) {
+        window.clearTimeout(debounceId);
+      }
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, []);
 
 
   const onSaveClick = () => {

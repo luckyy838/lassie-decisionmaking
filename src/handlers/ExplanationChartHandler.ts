@@ -1,7 +1,7 @@
 import * as Chart from 'chart.js';
 //import * as BarChart from chart
 import { Action, IState, ExplanationChart } from '../state';
-import { explanationChartOption, explanationChartBarOption} from '../constants';
+import { explanationChartOption } from '../constants';
 import 'chartjs-plugin-annotation';
 
 
@@ -36,6 +36,105 @@ const BoldTickUnderlayPlugin = {
 };
 
 Chart.plugins.register(BoldTickUnderlayPlugin);
+
+export function applyExplanationChartLayout(chart: any) {
+  if (!chart || !chart.options || !chart.ctx) {
+    return;
+  }
+  try {
+  const parent = document.getElementById('explanationChartParent');
+  const w = parent ? parent.clientWidth : 0;
+  const h = parent ? parent.clientHeight : 0;
+  if (w < 20 || h < 20) {
+    return;
+  }
+  const prevW = chart._lassieLayoutW || 0;
+  const prevH = chart._lassieLayoutH || 0;
+  if (Math.abs(prevW - w) < 2 && Math.abs(prevH - h) < 2) {
+    return;
+  }
+  chart._lassieLayoutW = w;
+  chart._lassieLayoutH = h;
+
+  chart.options.maintainAspectRatio = false;
+  chart.options.responsive = false;
+
+  const scale = Math.max(0.38, Math.min(1.05, Math.min(h / 220, w / 420)));
+  const compact = h < 150;
+  const tiny = h < 110;
+  const titleSize = Math.max(tiny ? 7 : 8, Math.round(12 * scale));
+  const legendSize = Math.max(tiny ? 6 : 7, Math.round(10 * scale));
+  const boxW = Math.max(tiny ? 8 : 10, Math.round(12 * scale));
+  const axisSize = Math.max(tiny ? 6 : 7, Math.round(9 * scale));
+
+  chart.options.title = chart.options.title || {};
+  chart.options.title.display = true;
+  chart.options.title.fontSize = titleSize;
+  chart.options.title.padding = tiny ? 0 : (compact ? 1 : 4);
+  chart.options.title.text = 'Reward Value for Each Objective Across Transect';
+
+  chart.options.legend = {
+    display: true,
+    position: 'top',
+    fullWidth: true,
+    labels: {
+      fontSize: legendSize,
+      fontStyle: 'normal',
+      boxWidth: boxW,
+      padding: tiny ? 2 : (compact ? 4 : 6),
+      usePointStyle: false
+    }
+  };
+  if (chart.options.plugins && chart.options.plugins.legend) {
+    chart.options.plugins.legend.display = false;
+  }
+
+  chart.options.layout = chart.options.layout || {};
+  chart.options.layout.padding = tiny
+    ? { top: 0, right: 2, bottom: 0, left: 0 }
+    : (compact ? { top: 0, right: 4, bottom: 0, left: 0 } : { top: 2, right: 6, bottom: 2, left: 2 });
+
+  const xAxes = chart.options.scales && chart.options.scales.xAxes;
+  if (xAxes && xAxes[0]) {
+    xAxes[0].ticks = {
+      ...(xAxes[0].ticks || {}),
+      display: false,
+      fontSize: axisSize,
+      maxRotation: 0,
+      minRotation: 0,
+      padding: tiny ? 0 : 3
+    };
+    if (xAxes[0].scaleLabel) {
+      xAxes[0].scaleLabel.display = !compact;
+      xAxes[0].scaleLabel.fontSize = axisSize;
+      xAxes[0].scaleLabel.padding = compact ? 0 : 4;
+      xAxes[0].scaleLabel.labelString = 'Transect';
+    }
+  }
+  const yAxes = chart.options.scales && chart.options.scales.yAxes;
+  if (yAxes && yAxes[0]) {
+    yAxes[0].ticks = {
+      ...(yAxes[0].ticks || {}),
+      display: !tiny,
+      min: 0,
+      max: 1.1,
+      fontSize: axisSize
+    };
+    if (yAxes[0].scaleLabel) {
+      yAxes[0].scaleLabel.display = !compact;
+      yAxes[0].scaleLabel.fontSize = axisSize;
+      yAxes[0].scaleLabel.padding = compact ? 0 : 4;
+    }
+  }
+
+  if (chart.resize) {
+    chart.resize();
+  }
+  if (chart.update) {
+    chart.update(0);
+  }
+  } catch (err) {}
+}
 
 
 
@@ -144,103 +243,34 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
       console.log("logged spatial reward from explanation chart");
       console.log(currUserStep);
       //spatial
-      const spatialRewardFormat = spatialReward.map((j,i) => ({x:i, y:j}));
-      console.log("formatted spatial reward" + spatialRewardFormat);
+      const spatialRewardFormat = (spatialReward && spatialReward.length)
+        ? spatialReward.map((j,i) => ({x: i, y: j}))
+        : [];
+      explanationChart.data.datasets[0].data = spatialRewardFormat;
 
-     
-     
-
-
-      const testData0 = [
-        { x: 0, y: 0.7429797155009306 },
-        { x: 1, y: 0.43861608620107184 },
-        { x: 2, y: 0.7429797155009306 },
-        { x: 3, y: 0.9753345122421678 },
-        { x: 4, y: 0.9995038341283518 },
-        { x: 5, y: 0.9999979060678188 },
-        { x: 6, y: 0.9999979060678188 },
-        { x: 7, y: 0.9995038341283518 },
-        { x: 8, y: 0.9753345122418252 },
-        { x: 9, y: 0.7429797136518924 },
-        { x: 10, y: 0.4386139941179287 },
-        { x: 11, y: 0.7424835496296249 },
-        { x: 12, y: 0.9506690244843357 },
-        { x: 13, y: 0.7424835496292823 },
-        { x: 14, y: 0.43861399226889053 },
-        { x: 15, y: 0.7429776215687494 },
-        { x: 16, y: 0.9748383463705196 },
-        { x: 17, y: 0.9748383463708622 },
-        { x: 18, y: 0.7429776234177874 },
-        { x: 19, y: 0.4386160843520337 },
-        { x: 20, y: 0.742979715500588 },
-        { x: 21, y: 0.9753345122421678 }
-    ];
-     const testData0bar = [
-        { x: '10', y: 0.6 },
-        { x: '70', y: 0.8 },
-        { x: '55', y: 0.3},
-       
-        
-
-    ]
-     explanationChart.data.datasets[0].data = testData0bar; //NOTE 5/20 used to be spatialRewardFormat
-      
-      console.log("data 0 from explanation chart handler" + explanationChart.data.datasets[0].data) 
+      console.log("data 0 from explanation chart handler" + explanationChart.data.datasets[0].data)
    // discrepancy - green
 
    console.log("logging discrepancy reward from explanation chart");
    console.log(discrepancyReward);
-   const discrepancyRewardFormat = discrepancyReward.map((j,i) => ({x:i, y:j}));
+   const discrepancyRewardFormat = (discrepancyReward && discrepancyReward.length)
+     ? discrepancyReward.map((j,i) => ({x: i, y: j}))
+     : [];
       console.log("formatted discrepancy reward" + discrepancyRewardFormat);
 
-    const testData1 = [
-        { x: 0, y: 0.3154091199969593 },
-        { x: 1, y: 0.2838104103438007 },
-        { x: 2, y: 0.264149394170256 },
-        { x: 3, y: 0.24484835963150375 },
-        { x: 4, y: 0.22554732509275158 },
-        { x: 5, y: 0.20624629055399937 },
-        { x: 6, y: 0.18694525601524728 },
-        { x: 7, y: 0.16764422147649513 },
-        { x: 8, y: 0.1483431869377429 },
-        { x: 9, y: 0.1291622211682804 },
-        { x: 10, y: 0.13026312607811671 },
-        { x: 11, y: 0.18016271759208138 },
-        { x: 12, y: 0.23357978352283973 },
-        { x: 13, y: 0.2870782718242321 },
-        { x: 14, y: 0.339743653685639 },
-        { x: 15, y: 0.3460147117399505 },
-        { x: 16, y: 0.34759080041423723 },
-        { x: 17, y: 0.34919553274652965 },
-        { x: 18, y: 0.35668745798119095 },
-        { x: 19, y: 0.36725129317627575 },
-        { x: 20, y: 0.37752276015714054 },
-        { x: 21, y: 0.3805363782074797 }
+    explanationChart.data.datasets[1].data = discrepancyRewardFormat;
 
-    ]
-
-    ;
-
-    const testData1bar = [
-        { x: '10', y: 0.3154091199969593 },
-        { x: '70', y: 0.2838104103438007 },
-        { x: '55', y: 0.264149394170256 },
-       
-        
-
-    ]
-
-   // explanationChart.data.datasets[1].data = testData1bar
-    //now to create the bar chart data, which will depend on robot suggestions 
-    //DISCRETE EXPLANATION data for chart
-    robotSuggestions.forEach((s,k) => console.log("s.index" + s.index + "s."));
-    console.log("is robotSuggestions an array? " + Array.isArray(robotSuggestions))
-    console.log("is robot suggestions[0] a thing? " + robotSuggestions[0])
-    const suggestionIndex = Array.isArray(robotSuggestions) && robotSuggestions[0] ? robotSuggestions[0].index : 0;
-    const discrepancyRewardAtIndex = discrepancyReward[suggestionIndex];
-    console.log("suggestionIndex" + suggestionIndex + "reward at index" + discrepancyRewardAtIndex)
-    explanationChart.data.datasets[1].data = [{ x: suggestionIndex.toString, y: discrepancyRewardAtIndex}]; //NOTE 5/20 used to be discrepancyRewardFormat
-    console.log("data test" + explanationChart.data.datasets[1].data)
+    const xMax = Math.max(
+      spatialRewardFormat.length ? spatialRewardFormat[spatialRewardFormat.length - 1].x : 21,
+      discrepancyRewardFormat.length ? discrepancyRewardFormat[discrepancyRewardFormat.length - 1].x : 21
+    );
+    if (explanationChart.options && explanationChart.options.scales && explanationChart.options.scales.xAxes && explanationChart.options.scales.xAxes[0]) {
+      explanationChart.options.scales.xAxes[0].ticks = {
+        ...(explanationChart.options.scales.xAxes[0].ticks || {}),
+        min: 0,
+        max: xMax
+      };
+    }
 
     const dynamicHighlights = Array.isArray(robotSuggestions)
   ? robotSuggestions.map((s, k) => (
@@ -267,7 +297,7 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     //   //console.log("chart.shearChartMap undefined");
     // }
   
-    explanationChart.update();
+    applyExplanationChartLayout(explanationChart);
     dispatch({
         type: Action.SET_EXPLANATION_CHART,
         value: explanationChart
@@ -322,15 +352,18 @@ export const initializeExplanationChart = (globalState: IState, dispatch: any) :
 
   
       if (explanationCtx) {
-        explanationChart = new Chart(explanationCtx, explanationChartBarOption as any); //add or here for randomization
+        explanationChart = new Chart(explanationCtx, explanationChartOption as any);
+        applyExplanationChartLayout(explanationChart);
       }
     }
 
-    (explanationChart.options as any).scales = (explanationChart.options as any).scales || {};
-(explanationChart.options as any).scales.xAxes = (explanationChart.options as any).scales.xAxes || [{ id: 'x-axis-0' }];
-if (!(explanationChart.options as any).scales.xAxes[0]) {
-  (explanationChart.options as any).scales.xAxes[0] = { id: 'x-axis-0' };
-}
+    if (explanationChart && explanationChart.options) {
+      (explanationChart.options as any).scales = (explanationChart.options as any).scales || {};
+      (explanationChart.options as any).scales.xAxes = (explanationChart.options as any).scales.xAxes || [{ id: 'x-axis-0' }];
+      if (!(explanationChart.options as any).scales.xAxes[0]) {
+        (explanationChart.options as any).scales.xAxes[0] = { id: 'x-axis-0' };
+      }
+    }
 //(explanationChart.options as any).scales.xAxes[0].type = 'linear'; //5/20 NOTE Commented to test 
 
 // (explanationChart.options as any).scales.xAxes[0].ticks = {
@@ -393,6 +426,7 @@ const initialHighlights = Array.isArray(robotSuggestions) && robotSuggestions.le
     // const charts : Charts = {
     //   shearChart, moistChart, shearMoistChart, shearChartMap, moistChartMap, shearMoistChartMap
     // };
+    applyExplanationChartLayout(explanationChart);
     dispatch({
       type: Action.SET_EXPLANATION_CHART,
       value: explanationChart
@@ -423,8 +457,13 @@ var resetCanvas = function(){
       explanationCanvas.id = 'explanationChart';
       parent.appendChild(explanationCanvas);
     }
-    explanationCanvas.width = 600;
-    explanationCanvas.height = 200;
+    explanationCanvas.style.display = 'block';
+    explanationCanvas.style.width = '100%';
+    explanationCanvas.style.height = '100%';
+    const w = parent.clientWidth || 600;
+    const h = parent.clientHeight || 200;
+    explanationCanvas.width = w;
+    explanationCanvas.height = h;
   };
 
 

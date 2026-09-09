@@ -695,6 +695,18 @@
     .chartCard-dune { grid-area: dune; }
     .chartCard-reward { grid-area: reward; }
 
+    .chartCard-reward .explanationPanelContainer,
+    .chartCard-reward .explanationPanel,
+    .chartCard-reward .explanationPanel > div,
+    .chartCard-reward .explanationParent {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+        width: 100%;
+    }
+
     .chartExpandBtn {
         position: absolute;
         top: 6px;
@@ -753,10 +765,10 @@
         min-height: 0;
         min-width: 0;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         overflow: hidden;
-        padding: 8px;
+        padding: 2px 8px 20px 8px;
         box-sizing: border-box;
     }
 
@@ -796,6 +808,10 @@
         height: 100%;
         width: 100%;
         overflow: hidden;
+    }
+
+    #explanationChartParent canvas {
+        display: block;
     }
 
     > .user-feedback,

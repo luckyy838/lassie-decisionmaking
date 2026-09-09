@@ -392,25 +392,33 @@ export const PopboxTypeEnum = {
 export const explanationChartOption = {
   type: 'line',
   data: {
-    labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '','','','','','','',''],
+    labels: [],
     datasets: [
       {
         label: 'Coverage',
         yAxisID: 'reward',
         data: [],
-        tension: 0.3,
-        borderColor: 'rgba(128, 0, 128, 1)', // Purple
-        backgroundColor: 'rgba(128, 0, 128, 0.2)',
-        fill: false
+        borderColor: 'rgba(128, 0, 128, 1)',
+        backgroundColor: 'rgba(128, 0, 128, 1)',
+        fill: false,
+        lineTension: 0.3,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        borderWidth: 2,
+        showLine: true
       },
       {
         label: 'Hypothesis',
         yAxisID: 'reward',
         data: [],
-        tension: 0.3,
-        borderColor: 'rgba(0, 128, 0, 1)', // Green
-        backgroundColor: 'rgba(0, 128, 0, 0.2)',
-        fill: false
+        borderColor: 'rgba(0, 128, 0, 1)',
+        backgroundColor: 'rgba(0, 128, 0, 1)',
+        fill: false,
+        lineTension: 0.3,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        borderWidth: 2,
+        showLine: true
       }
     ]
   },
@@ -421,42 +429,32 @@ export const explanationChartOption = {
       fontStyle: "bold"
     },
     maintainAspectRatio: false,
-    responsive: true,
+    responsive: false,
     chartArea: { backgroundColor: '#FFF' },
-    
-    // ✅ Enable and customize the legend
-    plugins: {
-      legend: {
-        display: true, // Enable legend
-        position: 'top', // 'top', 'bottom', 'left', or 'right'
-        labels: {
-          color: 'black', // Legend text color
-          font: {
-            size: 14 // Legend font size
-          },
-          usePointStyle: true, // Make legend markers circles instead of rectangles
-          boxWidth: 20 // Size of color box in legend
-        }
+    legend: {
+      display: true,
+      position: 'top',
+      labels: {
+        fontSize: 10,
+        boxWidth: 12,
+        padding: 6,
+        usePointStyle: false
       }
     },
-
     elements: {
       point: {
-        radius: 0, // Visible points
-        hoverRadius: 6,
-        borderWidth: 2,
-        hoverBorderWidth: 2
+        radius: 0,
+        hoverRadius: 4,
+        borderWidth: 0,
+        hoverBorderWidth: 1
       },
       line: {
         tension: 0.3
       }
     },
-
-    // Disable animations for immediate updates
     animation: { duration: 0 },
     hover: { animationDuration: 0 },
     responsiveAnimationDuration: 0,
-
     scales: {
       yAxes: [{
         position: 'left',
@@ -466,12 +464,12 @@ export const explanationChartOption = {
           labelString: 'Reward Value'
         },
         ticks: {
-          display: false,
-          min: 0
-          // stepSize: 0.1
+          display: true,
+          min: 0,
+          max: 1.1,
+          stepSize: 0.1
         }
       }],
-      
       xAxes: [{
         type: 'linear',
         position: 'bottom',
@@ -482,7 +480,7 @@ export const explanationChartOption = {
         ticks: {
           display: false,
           min: 0,
-          max: 21,
+          max: 99,
           stepSize: 1
         }
       }]
@@ -534,18 +532,16 @@ export const explanationChartBarOption = {
     plugins: {
       dataLabels:{
         display: false
-      },
-      legend: {
-        display: true, // Enable legend
-        position: 'top', // 'top', 'bottom', 'left', or 'right'
-        labels: {
-          color: 'black', // Legend text color
-          font: {
-            size: 14 // Legend font size
-          },
-          usePointStyle: true, // Make legend markers circles instead of rectangles
-          boxWidth: 20 // Size of color box in legend
-        }
+      }
+    },
+    legend: {
+      display: true,
+      position: 'top',
+      labels: {
+        fontSize: 10,
+        boxWidth: 8,
+        padding: 6,
+        usePointStyle: false
       }
     },
 

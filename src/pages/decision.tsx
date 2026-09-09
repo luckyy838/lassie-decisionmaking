@@ -26,7 +26,7 @@ import ExplanationPanel from '../components/ExplanationPanel';
 import "../styles/decision.scss";
 import { CurrUserStepData, UserStepsData, Sample, PreSample } from '../types';
 import { initializeCharts } from '../handlers/ChartHandler';
-import { initializeExplanationChart } from '../handlers/ExplanationChartHandler';
+import { initializeExplanationChart, applyExplanationChartLayout } from '../handlers/ExplanationChartHandler';
 import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupMultipleOptions from '../components/RadioButtonGroupMultipleOptions';
 import RadioButtonGroupMultipleSelectionOptions from '../components/RadioButtonGroupMultipleSelectionOptions';
@@ -42,7 +42,7 @@ function ImgAlert({ open }) {
       type={PopboxTypeEnum.ERROR}
       anchorEl={() => document.getElementById("pos-picker")}
     >
-      Please click near the surface of stoss slope!   
+      Please click near the surface of stoss slope!
     </Popbox>
   );
 }
@@ -113,45 +113,9 @@ export default function Main() {
   }, [layoutMode]);
 
   useEffect(() => {
-    const resizeVisuals = () => {
-      window.dispatchEvent(new Event('resize'));
+    const resizeScatter = () => {
       try {
-        const liveExplanationChart = explanationChartRef.current as any;
         const liveChart = chartRef.current as any;
-        if (layoutMode === 'new' && liveExplanationChart && liveExplanationChart.options) {
-          liveExplanationChart.options.maintainAspectRatio = false;
-          liveExplanationChart.options.responsive = true;
-          if (liveExplanationChart.options.title) {
-            liveExplanationChart.options.title.fontSize = focusedChart === 'reward' ? 14 : 11;
-          }
-          if (liveExplanationChart.options.legend && liveExplanationChart.options.legend.labels) {
-            liveExplanationChart.options.legend.labels.fontSize = focusedChart === 'reward' ? 12 : 10;
-            liveExplanationChart.options.legend.labels.boxWidth = 10;
-          }
-          const xAxes = liveExplanationChart.options.scales && liveExplanationChart.options.scales.xAxes;
-          if (xAxes && xAxes[0]) {
-            xAxes[0].ticks = {
-              ...(xAxes[0].ticks || {}),
-              autoSkip: true,
-              maxTicksLimit: focusedChart === 'reward' ? 22 : 11,
-              fontSize: 9,
-              maxRotation: 0,
-              minRotation: 0
-            };
-            if (xAxes[0].scaleLabel) {
-              xAxes[0].scaleLabel.display = focusedChart === 'reward';
-            }
-          }
-          const yAxes = liveExplanationChart.options.scales && liveExplanationChart.options.scales.yAxes;
-          if (yAxes && yAxes[0] && yAxes[0].scaleLabel) {
-            yAxes[0].scaleLabel.display = focusedChart === 'reward';
-          }
-        }
-        if (liveExplanationChart && liveExplanationChart.resize) {
-          liveExplanationChart.resize();
-        } else if (liveExplanationChart && liveExplanationChart.update) {
-          liveExplanationChart.update();
-        }
         if (liveChart) {
           Object.keys(liveChart).forEach((key) => {
             const c = liveChart[key];
@@ -164,9 +128,12 @@ export default function Main() {
         }
       } catch (err) {}
     };
-    resizeVisuals();
-    const t = window.setTimeout(resizeVisuals, 80);
-    const t2 = window.setTimeout(resizeVisuals, 320);
+    resizeScatter();
+    const t = window.setTimeout(resizeScatter, 80);
+    const t2 = window.setTimeout(() => {
+      resizeScatter();
+      applyExplanationChartLayout(explanationChartRef.current);
+    }, 300);
     return () => {
       window.clearTimeout(t);
       window.clearTimeout(t2);
@@ -514,7 +481,7 @@ const onObjectiveTextChange = e => {
 
   const desiredWaypointQuestion =
     <div className="desired-waypoint-question">
-      <p><strong>Click the dune map to mark where you want to sample next. This is your plan. You will see RHex's suggestions after you click Submit.</strong></p>
+      <p><strong>Click the dune map to mark where you want to sample next. This is your plan. An orange star will appear on that point. After you click Submit, you will see RHex's suggestions (A, B, C) and can compare them with your star.</strong></p>
     </div>
 
   const explanationChoiceQuestion =

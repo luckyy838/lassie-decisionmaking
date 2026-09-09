@@ -13,7 +13,7 @@ interface RhexProps {
 export default function PositionIndicatorRhex({ left, top, width, height }: RhexProps) {
   const usePixelSize = width != null && height != null;
   return (
-      <div className="rhex-icon" style={{ left, top }}>
+      <div className="rhex-icon" style={{ left, top, zIndex: 8 }}>
           <img
             className="rhex-icon"
             src={rhexImage}

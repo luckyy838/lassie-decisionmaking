@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useCallback, useLayoutEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { NORMALIZED_HEIGHT, POPOVER_TIME, PopboxTypeEnum, NORMALIZED_WIDTH, NUM_MEASUREMENTS, sampleLocations } from '../constants';
+import { NORMALIZED_HEIGHT, POPOVER_TIME, PopboxTypeEnum, NORMALIZED_WIDTH, NUM_MEASUREMENTS, sampleLocations, locationColors } from '../constants';
 import { Sample } from '../types';
 import { getNearestIndex, getMeasurements } from '../util';
 import { useStateValue, Action } from '../state';
@@ -57,10 +57,6 @@ const useStyles = makeStyles({
     backgroundColor: '#e0f4f7',
     borderColor: '#028090',
   },
-  tickVisited: {
-    backgroundColor: '#d0d0d0',
-    borderColor: '#888',
-  },
 });
 
 const RHEX_BASE_W = 60;
@@ -69,27 +65,18 @@ const RHEX_BASE_H = 48;
 function getRhexPlacement(
   sampleIndex: number,
   renderHeight: number,
-  fitContainer: boolean,
   normOffsetX: number,
   normOffsetY: number,
 ) {
   const scale = renderHeight / NORMALIZED_HEIGHT;
-  if (fitContainer) {
-    const [nx, ny] = sampleLocations[sampleIndex];
-    const w = RHEX_BASE_W * scale;
-    const h = RHEX_BASE_H * scale;
-    return {
-      left: (nx - 7) * scale,
-      top: (ny - 50) * scale,
-      width: w,
-      height: h,
-    };
-  }
+  const [nx, ny] = sampleLocations[sampleIndex] || [normOffsetX, normOffsetY];
+  const w = RHEX_BASE_W * scale;
+  const h = RHEX_BASE_H * scale;
   return {
-    left: (normOffsetX - 7) * scale,
-    top: (normOffsetY - 50) * scale,
-    width: undefined as number | undefined,
-    height: undefined as number | undefined,
+    left: nx * scale - w / 2,
+    top: ny * scale - h - 4,
+    width: w,
+    height: h,
   };
 }
 
@@ -127,12 +114,7 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
   const { samples, currUserStep, numImgClicks, transectIdx, showRobotSuggestions, showNOMInput } = globalState;
   const { robotSuggestions, desiredWaypoint, userSample } = currUserStep;
   const mode = clickMode || 'sample';
-  const suggestionIndexes = (robotSuggestions || []).map(s => s.index);
   const visitedIndexes = samples.map(s => s.index);
-  const planIsSelected = showRobotSuggestions
-    && !!desiredWaypoint
-    && !!userSample
-    && userSample.index === desiredWaypoint.index;
 
   const [height, setHeight] = useState(0);
   useLayoutEffect(() => {
@@ -144,9 +126,12 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
     const apply = () => {
       if (fitContainer && parent) {
         const box = parent.getBoundingClientRect();
+        const cs = window.getComputedStyle(parent);
+        const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
         const ar = NORMALIZED_WIDTH / NORMALIZED_HEIGHT;
-        const maxW = Math.max(0, box.width);
-        const maxH = Math.max(0, box.height);
+        const maxW = Math.max(0, box.width - padX);
+        const maxH = Math.max(0, box.height - padY);
         let w = maxW;
         let h = w / ar;
         if (h > maxH && maxH > 0) {
@@ -322,16 +307,31 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
       {imgEl && height > 0 && sampleLocations.map((loc, index) => {
         const isVisited = visitedIndexes.indexOf(index) !== -1;
         const isHovered = hoveredTick === index;
+        const isSelected = (!!userSample && userSample.index === index)
+          || (!!desiredWaypoint && desiredWaypoint.index === index);
+        const locColor = locationColors[index];
+        const tickStyle: React.CSSProperties = {
+          left: loc[0] * height / NORMALIZED_HEIGHT,
+          top: loc[1] * height / NORMALIZED_HEIGHT,
+        };
+        if (isVisited) {
+          tickStyle.backgroundColor = locColor;
+          tickStyle.borderColor = locColor;
+        }
+        if (isSelected) {
+          tickStyle.borderColor = locColor;
+          tickStyle.boxShadow = '0 0 0 2px ' + locColor;
+          if (!isVisited) {
+            tickStyle.backgroundColor = '#fff';
+          }
+        }
         return (
           <button
             key={'tick-' + index}
             type="button"
             title={'Sampling location ' + (index + 1)}
-            className={`${classes.tick} ${enabled ? classes.tickEnabled : ''} ${isVisited ? classes.tickVisited : ''} ${isHovered ? classes.tickHover : ''}`}
-            style={{
-              left: loc[0] * height / NORMALIZED_HEIGHT,
-              top: loc[1] * height / NORMALIZED_HEIGHT,
-            }}
+            className={`${classes.tick} ${enabled ? classes.tickEnabled : ''} ${isHovered && !isVisited && !isSelected ? classes.tickHover : ''}`}
+            style={tickStyle}
             disabled={!enabled}
             onClick={ev => onTickClick(ev, index)}
             onMouseEnter={() => setHoveredTick(index)}
@@ -343,46 +343,11 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
         showNOMInput && <AddSamplePopup clickPosition={clickPosition} clickIndex={clickIndex} onAddData={addDataFunc} />
       }
       {
-        samples.map((sample, sampleIdx) => {
-          if (!imgEl) {
-            return null;
-          }
-
-          const { index, type, normOffsetX, normOffsetY, isHovered } = sample;
-          const isPendingSuggestionPick = showRobotSuggestions
-            && userSample
-            && sampleIdx === samples.length - 1
-            && userSample.index === index
-            && suggestionIndexes.indexOf(index) !== -1;
-          const isPendingPlanPick = showRobotSuggestions
-            && desiredWaypoint
-            && userSample
-            && sampleIdx === samples.length - 1
-            && userSample.index === index
-            && desiredWaypoint.index === index;
-          if (isPendingSuggestionPick || isPendingPlanPick) {
-            return null;
-          }
-          
-          return <PositionIndicator
-            key={sampleIdx}
-            left={normOffsetX * height / NORMALIZED_HEIGHT}
-            top={normOffsetY * height / NORMALIZED_HEIGHT}
-            rowIndex={sampleIdx}
-            isHovered={isHovered}
-            type={type}
-            locationIndex={index}
-            robot={false}
-          />;
-        })
-      }
-      {
         samples.length > 0 && height > 0 && (() => {
           const last = samples[samples.length - 1];
           const placement = getRhexPlacement(
             last.index,
             height,
-            !!fitContainer,
             last.normOffsetX,
             last.normOffsetY,
           );
@@ -397,11 +362,13 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
         })()
       }
       {showRobotSuggestions && robotSuggestions &&
-        robotSuggestions.map((suggestion, rowIndex) => (
+        robotSuggestions.map((suggestion, rowIndex) => {
+          const snap = sampleLocations[suggestion.index] || [suggestion.normOffsetX, suggestion.normOffsetY];
+          return (
           <PositionIndicator
             key={Number(suggestion.index) + suggestion.normOffsetX + suggestion.normOffsetY}
-            left={suggestion.normOffsetX * height / NORMALIZED_HEIGHT}
-            top={suggestion.normOffsetY * height / NORMALIZED_HEIGHT}
+            left={snap[0] * height / NORMALIZED_HEIGHT}
+            top={snap[1] * height / NORMALIZED_HEIGHT}
             rowIndex={rowIndex}
             isHovered={suggestion.isHovered}
             type={suggestion.type}
@@ -409,15 +376,18 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
             robot={true}
             selected={!!userSample && userSample.index === suggestion.index}
           />
-        )) 
+          );
+        })
       }
-      {desiredWaypoint && imgEl &&
+      {desiredWaypoint && imgEl && height > 0 && (() => {
+        const snap = sampleLocations[desiredWaypoint.index] || [desiredWaypoint.normOffsetX, desiredWaypoint.normOffsetY];
+        return (
         <span
           style={{
             position: 'absolute',
-            left: desiredWaypoint.normOffsetX * height / NORMALIZED_HEIGHT,
-            top: desiredWaypoint.normOffsetY * height / NORMALIZED_HEIGHT,
-            transform: 'translate(-50%, -85%)',
+            left: snap[0] * height / NORMALIZED_HEIGHT,
+            top: snap[1] * height / NORMALIZED_HEIGHT,
+            transform: 'translate(-50%, calc(-100% - 6px))',
             pointerEvents: 'none',
             zIndex: 6,
           }}
@@ -425,24 +395,17 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
         >
           <span
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: planIsSelected ? '2.2rem' : undefined,
-              height: planIsSelected ? '2.2rem' : undefined,
-              borderRadius: '50%',
-              border: planIsSelected ? '2px solid #cc0000' : 'none',
-              boxShadow: planIsSelected ? '0 0 0 2px #cc0000' : undefined,
-              backgroundColor: planIsSelected ? '#fff' : undefined,
-              fontSize: '1.8rem',
+              fontSize: '1.35rem',
+              lineHeight: 1,
               color: '#e65100',
-              textShadow: '0 0 3px #fff'
+              textShadow: '0 0 3px #fff, 0 0 3px #fff'
             }}
           >
             ★
           </span>
         </span>
-      }
+        );
+      })()}
     </div>
   );
 }

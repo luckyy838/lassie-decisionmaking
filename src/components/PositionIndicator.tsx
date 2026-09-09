@@ -31,12 +31,16 @@ const useStyles = makeStyles(theme => ({
     },
     '& .content': {
       borderRadius: '50%',
-      border: '2px solid transparent',
-      width: '1.4rem',
-      display: 'inline-block',
-      marginLeft: 12,
+      border: '1px solid transparent',
+      width: '0.9rem',
+      height: '0.9rem',
+      lineHeight: '0.85rem',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       textAlign: 'center',
-      transform: 'translate(-140%, 50%)'
+      backgroundColor: '#fff',
+      boxShadow: '0 1px 1px rgba(0,0,0,0.18)',
     }
   },
   current: {
@@ -54,14 +58,11 @@ const useStyles = makeStyles(theme => ({
       borderColor: '#cc0000',
       backgroundColor: '#fff',
       color: '#cc0000',
-      boxShadow: '0 0 0 2px #cc0000',
+      boxShadow: 'none',
+      borderWidth: 1.5,
     },
     '& .dot': {
-      backgroundColor: '#cc0000',
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      border: '2px solid #fff',
+      display: 'none',
     }
   },
   [RowType.DEVIATE]: {
@@ -114,24 +115,24 @@ export default function PositionIndicator({ left, top, type, rowIndex, isHovered
                   ${rowIndex === currSampleIdx - 1 && type !== RowType.DISCARDED ? classes.current : ''} 
                   ${isHovered ? classes.hover : ''}
                   ${isSelected ? classes.selected : ''}`}
-      style={{ left, top }}
+      style={robot
+        ? { left, top, transform: 'translate(-50%, 1px)', zIndex: 7, pointerEvents: 'none' }
+        : { left, top }}
     >
       {!robot && <span className="dot" style={{ backgroundColor: locationColors[locationIndex] }}></span>}
-      {robot && isSelected && <span className="dot"></span>}
-      {robot && !isSelected && 
-        <span 
-          style={{ 
-            content: '""', 
-            display: 'block',
-            width: 0,
-            height: 0,
-            borderLeft: '1vh solid transparent',
-            borderRight: '1vh solid transparent',
-            borderBottom: `1.5vh solid ${locationColors[locationIndex]}`,
-        }}>
-      </span>}
-        {robot && <span className="content" style={{ color: isSelected ? '#cc0000' : theme.palette.secondary.main, fontSize: '2.5vh', transform: 'translate(-60%, 50%)' }}>{String.fromCharCode(rowIndex + 65)}
-      </span>}
+      {robot && (
+        <span
+          className="content"
+          style={{
+            color: isSelected ? '#cc0000' : theme.palette.secondary.main,
+            fontSize: 10,
+            fontWeight: 700,
+            borderColor: isSelected ? '#cc0000' : locationColors[locationIndex],
+          }}
+        >
+          {String.fromCharCode(rowIndex + 65)}
+        </span>
+      )}
     </span>
   );
 }
