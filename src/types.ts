@@ -65,7 +65,7 @@ export interface CurrUserStepData {
   objectives: Objective[], 
   objectiveFreeResponse: string, // stores user's free response for the objective
   sampleType: 'robot' | 'user' | null,
-  robotSuggestions : Sample[], // stores robot's suggested sample locations at each step
+  robotSuggestions : PreSample[], // stores robot's suggested sample locations at each step
   spatialReward: number[],
   variableReward: number[],
   discrepancyReward: number[],
@@ -81,6 +81,11 @@ export interface CurrUserStepData {
   rejectExplanationRating: number,
   resolutionMethod: number,
   transition : number, // stores user's choice for the next data collection step
+  desiredWaypoint: PreSample | null,
+  decisionConfidence: number,
+  suggestionOverlapNote: string,
+  hitSuggestion: boolean,
+  matchedSuggestionLabel: string | null,
 }
 
 /** Interface for the finalized user step details */
@@ -103,7 +108,12 @@ export interface UserStepsData {
   transition : string,
   spatialReward: number[],
   variableReward: number[],
-  discrepancyReward: number[]
+  discrepancyReward: number[],
+  desiredWaypoint: PreSample | null,
+  decisionConfidence: string | null,
+  suggestionOverlapNote: string,
+  hitSuggestion: boolean,
+  matchedSuggestionLabel: string | null,
 }
 
 /** Interface for the samples collected */
@@ -126,4 +136,6 @@ export interface PreSample {
   normOffsetX: number,
   normOffsetY: number,
   isHovered: boolean,
+  methodLabel?: string,
+  methodIndexes?: number[],
 }

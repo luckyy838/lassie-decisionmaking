@@ -13,6 +13,7 @@ export const NORMALIZED_CREST_RANGE = {min: 209, max: 1089} // {209 = 229 - sqrt
 
 export const NUM_OF_LOCATIONS = 22;
 export const NUM_MEASUREMENTS = 3;
+export const MAX_USER_SAMPLES = 11;
 export const MAX_NUM_OF_MEASUREMENTS = 30;
 export const MAX_NUM_OF_TRANSECTS = 5;
 export const POPOVER_TIME = 3000;
@@ -203,6 +204,27 @@ export const resolutionTexts = [
   'Even weighting: choose a location that addresses both the primary and secondary objective but optimizes neither',
   'Hierarchical:  determine locations that optimize the primary objective and from these choose a location that best addresses the secondary objective'
 ]
+
+export const resolutionMethodShortNames = [
+  'One-at-a-time',
+  'Even weighting',
+  'Hierarchical',
+];
+
+export const explanationChoiceTexts = [
+  'With explanation',
+  'Without explanation',
+];
+
+export const decisionConfidenceTexts = [
+  '1 - Not at all confident',
+  '2 - Slightly confident',
+  '3 - Somewhat confident',
+  '4 - Moderately confident',
+  '5 - Very confident',
+  '6 - Highly confident',
+  '7 - Extremely confident',
+];
 
 export const experimentTitles = {
   soil: "Soil Strength vs. Soil Moisture",
@@ -398,7 +420,8 @@ export const explanationChartOption = {
       text: "Reward Value for Each Objective Across Transect",
       fontStyle: "bold"
     },
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
+    responsive: true,
     chartArea: { backgroundColor: '#FFF' },
     
     // ✅ Enable and customize the legend
@@ -498,7 +521,8 @@ export const explanationChartBarOption = {
       text: "Reward Value for Each Objective Across Transect",
       fontStyle: "bold"
     },
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
+    responsive: true,
     chartArea: { backgroundColor: '#FFF' },
     // scales: {
     //         xAxes: [{
@@ -564,12 +588,13 @@ export const explanationChartBarOption = {
           display: true,
           labelString: 'Transect (category)'
         },
-        // ticks: {
-        //   display: false,
-        //   min: 0,
-        //   max: 21,
-        //   stepSize: 1
-        // }
+        ticks: {
+          autoSkip: true,
+          maxTicksLimit: 12,
+          maxRotation: 0,
+          minRotation: 0,
+          fontSize: 10
+        }
       }]
     }
   }
@@ -959,16 +984,14 @@ export enum UserFeedbackState {
   TUTORIAL2,
   TUTORIAL3,
   TUTORIAL4,
+  EXPLANATION_CHOICE,
   RANK_OBJECTIVES,
   RES_METHOD,
-  OBJECTIVE_FREE_RESPONSE,
-  ACCEPT_OR_REJECT_SUGGESTION,
+  DESIRED_WAYPOINT,
+  USER_LOCATION_SELECTION,
   REJECT_REASON,
   REJECT_REASON_FREE_RESPONSE,
-  USER_LOCATION_SELECTION, //TODO: remove this?
-  UPDATE_OBJECTIVE_RANKINGS,
-  UPDATE_RES_METHOD,
-  TRANSITION,
+  DECISION_CONFIDENCE,
 };
 
 export const objectiveOptions = [

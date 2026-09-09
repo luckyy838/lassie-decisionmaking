@@ -64,7 +64,8 @@ export interface IState {
   numImgClicks: number, // controls when the global state's "rows" get loaded into the actual strategy and populated in the charts
   showNOMInput: boolean,
   introCompleted: boolean,
-  submitted: boolean
+  submitted: boolean,
+  explanationEnabled: boolean | null
 }
 
 // Default initial state
@@ -105,6 +106,11 @@ export const initialState : IState = {
     rejectExplanationRating: 0,
     resolutionMethod: 0,
     transition: 0, // previous: 0 Set the option from 0 to 1 by default. - Zeyu, 5/17/2022
+    desiredWaypoint: null,
+    decisionConfidence: -1,
+    suggestionOverlapNote: "",
+    hitSuggestion: false,
+    matchedSuggestionLabel: null,
   },
   userSteps: [],
   conclusionFreeResponse: "", //Add by Zeyu 6/13/2022
@@ -131,6 +137,7 @@ export const initialState : IState = {
   showNOMInput: false,
   introCompleted: false,
   submitted: false,
+  explanationEnabled: null,
 };
 
 export type IAction = { type: any, value?: any }
@@ -187,8 +194,13 @@ export enum Action {
     SET_HOVER,
     SET_SHOW_NOM_INPUT,
     SET_INTRO_STATUS,
-    SET_SUBMITTED_STATUS // Executed when user submits final responses
-    ,
+    SET_SUBMITTED_STATUS, // Executed when user submits final responses
+    SET_EXPLANATION_ENABLED,
+    SET_DESIRED_WAYPOINT,
+    SET_DECISION_CONFIDENCE,
+    SET_SUGGESTION_OVERLAP_NOTE,
+    SET_HIT_SUGGESTION,
+    SET_MATCHED_SUGGESTION_LABEL,
 };
 
 // For actions that simply replace the corresponding key in state,
@@ -219,6 +231,7 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_SHOW_NOM_INPUT]: 'showNOMInput',
   [Action.SET_INTRO_STATUS]: 'introCompleted',
   [Action.SET_SUBMITTED_STATUS]: 'submitted',
+  [Action.SET_EXPLANATION_ENABLED]: 'explanationEnabled',
 };
 
 type SubReducer<T> = (subState: T, state: Readonly<IState>, action: IAction) => T;
@@ -279,6 +292,11 @@ const actionKeyMapCurrUserStep : ActionKeyMapCurrUserStep = {
   [Action.SET_REJECT_EXPLANATION_RATING]: 'rejectExplanationRating',
   [Action.SET_RES_METHOD]: 'resolutionMethod',
   [Action.SET_TRANSITION]: 'transition',
+  [Action.SET_DESIRED_WAYPOINT]: 'desiredWaypoint',
+  [Action.SET_DECISION_CONFIDENCE]: 'decisionConfidence',
+  [Action.SET_SUGGESTION_OVERLAP_NOTE]: 'suggestionOverlapNote',
+  [Action.SET_HIT_SUGGESTION]: 'hitSuggestion',
+  [Action.SET_MATCHED_SUGGESTION_LABEL]: 'matchedSuggestionLabel',
 };
 
 const currUserStepReducer : SubReducer<CurrUserStepData> = (currUserStep, state, action) => {

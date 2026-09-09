@@ -11,37 +11,41 @@ interface ConsentPanelProps {
     onCompletion: () => void
 }
 
-const consentPdf = require('../../assets/LASSIE Web-Based Scenario Consent.pdf');
+const consentPdf = require('../../assets/LASSIE_Simulated_Scenario_Consent.pdf');
 
 const useStyles = makeStyles({
     container: {
         width: '100%',
         height: '100%',
-        position: 'relative'
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column'
     },
     iframe: {
         width: '100%',
-        height: 'calc(100% - 230px)'
+        flex: 1,
+        minHeight: 0,
+        border: 'none'
     },
     consentButtonRow: {
-        marginTop: 30
+        marginTop: 16,
+        flexShrink: 0
     },
     title: {
         fontFamily: 'Helvetic, sans-serif',
         color: '#114B5F',
-        fontSize: 40,
-        margin: 0,
-        height: 30
+        fontSize: 32,
+        margin: 0
     },
     subtitle: {
         fontFamily: 'Helvetic, sans-serif',
         color: '#256c85',
-        fontSize: 30,
-        marginBottom: 0,
-        height: 30
+        fontSize: 16,
+        marginTop: 4,
+        marginBottom: 8
     },
     formControl: {
-        height: 50
+        minHeight: 108
     }
 });
 
@@ -74,8 +78,8 @@ export default function ConsentPanel(props: ConsentPanelProps) {
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.title}>Geologic Decision Making</h1>
-            <h2 className={styles.subtitle}>Consent Form</h2>
+            <h1 className={styles.title}>Research Consent Form</h1>
+            <h2 className={styles.subtitle}>Legged Autonomous Surface Science in analog Environments (LASSIE)</h2>
             <iframe className={styles.iframe} src={`${consentPdf}#toolbar=0`}></iframe>
             <div className={styles.consentButtonRow}>
                 {

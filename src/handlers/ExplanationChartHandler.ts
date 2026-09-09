@@ -413,15 +413,18 @@ export const clearExplanationChart = (chart) => {
   
 
 var resetCanvas = function(){
-    document.getElementById('explanationChart')?.remove();
-    
-  
-    let explanationCanvas = document.createElement('canvas');
-    explanationCanvas.id = 'explanationChart';
+    const parent = document.getElementById('explanationChartParent');
+    if (!parent) {
+      return;
+    }
+    let explanationCanvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
+    if (!explanationCanvas || explanationCanvas.parentNode !== parent) {
+      explanationCanvas = document.createElement('canvas');
+      explanationCanvas.id = 'explanationChart';
+      parent.appendChild(explanationCanvas);
+    }
     explanationCanvas.width = 600;
     explanationCanvas.height = 200;
-    document.getElementById('explanationChartParent')?.appendChild(explanationCanvas);
-    //TODO: make sure to add everything under a parent div in ExplanationChart file with the right title
   };
 
 

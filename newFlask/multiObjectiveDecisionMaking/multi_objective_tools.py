@@ -127,8 +127,12 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
     info_high_index = np.where(info_reward > 0.85) #TODO SUPPOSED TO BE GREATER THAN 0.85
     print("INFO HIGH INDEX", info_high_index)
     print("INFO REWARD", info_reward)
-    info_hier_index = np.argmax(disp_reward[info_high_index])
-    info_hier_location = pareto_sets_loc[info_high_index[0][info_hier_index]]
+    if len(info_high_index[0]) == 0:
+        info_hier_index = info_focused_index
+        info_hier_location = info_focused_location
+    else:
+        info_hier_index = np.argmax(disp_reward[info_high_index])
+        info_hier_location = pareto_sets_loc[info_high_index[0][info_hier_index]]
 
     disp_focused_index = np.argmax(disp_reward)
     disp_focused_suggestion = pareto_sets_loc[disp_focused_index]
@@ -138,8 +142,12 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
     
     # print(disp_reward[disp_high_index])
     
-    disp_hier_index = np.argmax(info_reward[disp_high_index]) # ERROR!!!!
-    disp_hier_location = pareto_sets_loc[disp_high_index[0][disp_hier_index]]
+    if len(disp_high_index[0]) == 0:
+        disp_hier_index = disp_focused_index
+        disp_hier_location = disp_focused_suggestion
+    else:
+        disp_hier_index = np.argmax(info_reward[disp_high_index])
+        disp_hier_location = pareto_sets_loc[disp_high_index[0][disp_hier_index]]
     
 
     # for trade-off suggest the high pareto distance one:

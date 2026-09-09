@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import { NORMALIZED_WIDTH, RowType, sampleLocations, NUM_OF_LOCATIONS, objectiveOptions,
-  MOISTURE_BINS, NUM_MEASUREMENTS, MAX_NUM_OF_MEASUREMENTS } from './constants';
+  MOISTURE_BINS, NUM_MEASUREMENTS, MAX_NUM_OF_MEASUREMENTS, resolutionMethodShortNames } from './constants';
 import { measurements } from './measurements';
 import { dataset } from './data/rhexDataset';
 import { Sample, PreSample, Objective } from './types';
@@ -254,6 +254,48 @@ export function parseQueryString(query: string) {
 //   };
 // }
 
+export function countUserChosenSamples(samples: Sample[]): number {
+  return samples.filter(s => s.type !== 'initial').length;
+}
+
+export function getExpQueryParam(): string | null {
+  const fromSearch = new URLSearchParams(window.location.search).get('exp');
+  if (fromSearch) return fromSearch;
+  const hash = window.location.hash;
+  const qIndex = hash.indexOf('?');
+  if (qIndex === -1) return null;
+  return new URLSearchParams(hash.slice(qIndex)).get('exp');
+}
+
+function objectiveRepre(primaryIsCoverage: boolean, methodIndex: number): number {
+  if (primaryIsCoverage) {
+    if (methodIndex === 0) return 0;
+    if (methodIndex === 2) return 0.25;
+    return 0.5;
+  }
+  if (methodIndex === 0) return 1;
+  if (methodIndex === 2) return 0.75;
+  return 0.5;
+}
+
+function joinMethodNames(methodIndexes: number[]): string {
+  const names = methodIndexes.map(i => resolutionMethodShortNames[i]);
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names[0] + ' and ' + names[1];
+  return names.slice(0, names.length - 1).join(', ') + ', and ' + names[names.length - 1];
+}
+
+function buildOverlapNote(indexToMethods: { [index: number]: number[] }): string {
+  const parts: string[] = [];
+  Object.keys(indexToMethods).forEach(idx => {
+    const methods = indexToMethods[Number(idx)];
+    if (methods.length > 1) {
+      parts.push("RHex's suggestions for " + joinMethodNames(methods) + " are the same location.");
+    }
+  });
+  return parts.join(' ');
+}
+
 export async function calculateRobotSuggestions(samples: Sample[], globalState: IState, objectives: Objective[]) {
 
   // Prepare inputs for flask backend calculation
@@ -269,144 +311,73 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     shearValues.push(Array.from(samples[i].shear));
   }
 
-  //console.log({locations, measurements, moistureValues, shearValues});
-  let objective_pattern = globalState.currUserStep.resolutionMethod;
-  // Compute the robot suggestions based on each objective (limit to 3 suggestions)
+  const rankedObjectives = [...objectives].sort((a, b) => a.ranking - b.ranking);
+  const primaryIsCoverage = rankedObjectives.length === 0 || rankedObjectives[0].objective === objectiveOptions[0];
+  const userMethod = globalState.currUserStep.resolutionMethod || 0;
+  const methodOrder = [userMethod, (userMethod + 1) % 3, (userMethod + 2) % 3];
 
-  let objective_repre;
-  switch (objectives[0].objective) {
-    case objectiveOptions[0]: {
-      if (objective_pattern == 0) {
-        objective_repre = 0; //info focused
-      } else if (objective_pattern == 1) {
-          objective_repre = 0.25; //info hier
-      } else {
-          objective_repre = 0.5; // trade off
-          console.log("info trade off ")
-      }
-        
-      break;
-    }
-    case objectiveOptions[1]: {
-      if (objective_pattern == 0) {
-        objective_repre = 1; //disp focused
-      } else if (objective_pattern == 1) {
-          objective_repre = 0.75; //disp hier
-      } else {
-          objective_repre = 0.5; // trade off
-          console.log("disp tradeoff")
-      }
-      break;
-    }
-    // case objectiveOptions[2]: {
-    //   locs = discrepancy_low_selection;
-    //   break;
-    // }
-    // case objectiveOptions[3]: {
-    //   locs = discrepancy_low_selection;
-    //   break;
-    // }
+  const flaskByMethod: { methodIndex: number, data: any }[] = [];
+  for (let i = 0; i < methodOrder.length; i++) {
+    const methodIndex = methodOrder[i];
+    const repre = objectiveRepre(primaryIsCoverage, methodIndex);
+    const data: any = await flaskCalculations(locations, measurements, moistureValues, shearValues, repre);
+    flaskByMethod.push({ methodIndex, data });
   }
-  let robotSuggestions : any = await flaskCalculations(locations, measurements, moistureValues, shearValues, objective_repre);
-  console.log("robotSuggestions from util" + robotSuggestions)
-  let final_suggestion: number[] = [robotSuggestions.final_suggestion]  //it was [robotSuggestions.final_suggestion] when it only was one suggestion
-  console.log("final suggestion" + final_suggestion)
-  let final_suggestion100: number[] = [robotSuggestions.final_suggestion_index100]
-  let discrepancy_selection = [0.1,0.2,0.4]
-  let spatial_reward: number[] = []
-  let variable_reward = []
-  let discrepancy_reward: number[] = []
-  // Return the top 3 suggested locations unordered
-  // reward_vector = []
-  //   index = 0
-  //   for i in range(22):
-  //       if i % 2 == 0 or i == 21:
-  //           chunk_size = 5
-  //       else:
-  //           chunk_size = 4
 
-  //       chunk = reward_vector_100[index:index+chunk_size]
-  //       print("CHUNK", chunk)
-  //       avg_info = sum(pair[0] for pair in chunk) / chunk_size #make sure that first values are info
-  //       avg_disp = sum(pair[1] for pair in chunk) / chunk_size
+  const userFlask = flaskByMethod[0].data;
+  console.log("robotSuggestions from util", flaskByMethod);
 
-  //       reward_vector.append([float(avg_info), float(avg_disp)])
-  //       index += chunk_size
-  let index = 0
-  let chunk_size = 0
-  //WHERE WE CHANGE NUMBER OF VALUES TO PLOT
-  for(let i = 0; i<100; i++){
-    // if(i%2 ==0 || i == 21){
-    //   chunk_size = 5
-    // }
-    // else{
-    //   chunk_size = 4
-    // }
-
-    // let info_chunk = robotSuggestions.info_gaussian.slice(index, index+chunk_size)
-    // let disp_chunk = robotSuggestions.disp_gaussian.slice(index, index+chunk_size)
-    // let info_chunk_average = info_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
-    // let disp_chunk_average = disp_chunk.reduce(function (sum, value) {return sum + value}, 0) / chunk_size
-    // spatial_reward.push(info_chunk_average)
-    // discrepancy_reward.push(disp_chunk_average)
-
-    spatial_reward.push(robotSuggestions.info_gaussian[i])
-    discrepancy_reward.push(robotSuggestions.disp_gaussian[i])
-    //delete lines above this and uncomment everything from 335 to 365 to restore to working version
-    // index += chunk_size
-
+  let spatial_reward: number[] = [];
+  let variable_reward = [];
+  let discrepancy_reward: number[] = [];
+  for (let i = 0; i < 100; i++) {
+    spatial_reward.push(userFlask.info_gaussian[i]);
+    discrepancy_reward.push(userFlask.disp_gaussian[i]);
   }
-  
-  //normalize spatial_reward
-//   let infoMin = Math.min(...spatial_reward)
-//   let infoMax = Math.max(...spatial_reward)
-//   spatial_reward = spatial_reward.map((x) => (x-infoMin)/(infoMax-infoMin))
 
-//   let dispMin = Math.min(...discrepancy_reward)
-//   let dispMax = Math.max(...discrepancy_reward)
-//   discrepancy_reward = discrepancy_reward.map((x) => (x-dispMin)/(dispMax-dispMin)
-// )
-  //
-  
-  
+  const indexToMethods: { [index: number]: number[] } = {};
+  const results: PreSample[] = [];
 
-  let locs;
-  locs = final_suggestion;
-  // let locs: number[] = []
-  // let results: PreSample[] = []
-  // //final suggestion seems to not be acting like an array
-  // for(let i = 0; i<final_suggestion.length; i++){
-  //   let loc = final_suggestion[i]
-  //   let suggestion : PreSample  = {
-  //     index: loc,
-  //     type: 'robot',
-  //     measurements: NUM_MEASUREMENTS,
-  //     normOffsetX: sampleLocations[loc][0],
-  //     normOffsetY: sampleLocations[loc][1],
-  //     isHovered: false
-  //   }
-  //   results.push(suggestion)
-  // }
-
-  let results : PreSample[] = locs.map((loc) => {
-    let suggestion : PreSample = {
+  flaskByMethod.forEach(({ methodIndex, data }) => {
+    const loc = Number(data.final_suggestion);
+    if (isNaN(loc) || loc < 0 || loc >= sampleLocations.length) {
+      return;
+    }
+    if (!indexToMethods[loc]) {
+      indexToMethods[loc] = [];
+    }
+    indexToMethods[loc].push(methodIndex);
+    if (results.some(r => r.index === loc)) {
+      return;
+    }
+    if (locations.indexOf(loc) !== -1) {
+      return;
+    }
+    results.push({
       index: loc,
       type: 'robot',
       measurements: NUM_MEASUREMENTS,
       normOffsetX: sampleLocations[loc][0],
       normOffsetY: sampleLocations[loc][1],
-      isHovered: false
-    }
-    return suggestion;
+      isHovered: false,
+      methodIndexes: [methodIndex],
+      methodLabel: resolutionMethodShortNames[methodIndex],
+    });
   });
 
-  
-  
+  results.forEach(r => {
+    r.methodIndexes = indexToMethods[r.index];
+    r.methodLabel = indexToMethods[r.index].map(i => resolutionMethodShortNames[i]).join(' / ');
+  });
 
-  console.log("utils print statement" + {locations, measurements, moistureValues, shearValues, robotSuggestions, results});
-  
+  const overlapNote = buildOverlapNote(indexToMethods);
+  const final_suggestion100: number[] = [Number(userFlask.final_suggestion_index100)];
+
+  console.log({locations, measurements, moistureValues, shearValues, results, overlapNote});
+
   return {
     results: results,
+    overlapNote: overlapNote,
     index100: final_suggestion100,
     spatialReward: spatial_reward,
     variableReward: variable_reward,
@@ -468,13 +439,16 @@ function flaskCalculations(locations: number[], measurements: number[], moisture
       cache: 'no-cache',
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json, text/plain, */*', //NOTE changed to accept same as accept header instead of only accepting application/json
-        'Access-Control-Allow-Origin': '*/*', //4/10
-        'Access-Control-Allow-Credentials': 'true', //4/10
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(inputs), 
     }).then(
-      res => res.json()
+      res => {
+        if (!res.ok) {
+          throw new Error(`Flask /process failed: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      }
     ).then(
       data => {
         console.log({data});

@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles, createTheme, ThemeProvider } from '@material-ui/core/styles';
 import { HashRouter as Router, Route, Switch, Redirect, useHistory, useLocation } from "react-router-dom";
-import { createMuiTheme } from '@material-ui/core/styles';
 import { StateProvider, useStateValue, Action } from './state';
 import Intro from './pages/intro';
 import Decision from './pages/decision';
@@ -12,13 +11,12 @@ import { SavedProgress } from './pages/savedProgress';
 import { GlobalDialog } from './components/GlobalDialog';
 import { logTrace } from './logger';
 import { TraceType, Sample } from './types';
-import ThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import { storeState, stateExists, removeStoredState, getStoredState } from './handlers/LocalStorageHandler';
 import { AUTO_LOAD_MS } from './constants';
 import { getMoistureData, getShearData, getMeasurements } from './util';
 import { initialSamplesSet } from './sampleTemplates';
 
-const theme = createMuiTheme({
+const theme = createTheme({
   palette: {
     primary: { main: '#114B5F' },
     secondary: { main: '#028090' },

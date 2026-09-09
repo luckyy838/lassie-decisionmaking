@@ -338,7 +338,7 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 
 export default function Survey() {
     const [globalState, dispatch] = useStateValue();
-    const { dataVersion, conclusionFreeResponse, samples, userSteps } = globalState;
+    const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled } = globalState;
     const [page, setPage] = useState(0);
     const [answers, setAnswers] = useState({} as SurveyAnswers);
     const setAnswer = (id: string, answer: string) => {
@@ -352,6 +352,7 @@ export default function Survey() {
     const saveLogs = surveyOutput => {
         const log = {
             dataVersion: dataVersion,
+            explanationEnabled: explanationEnabled,
             conclusionFreeResponse: conclusionFreeResponse,
             userSteps: userSteps,
             surveyResponses: surveyOutput

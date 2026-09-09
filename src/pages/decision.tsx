@@ -9,14 +9,15 @@ import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid';
 
 import HelpIcon from '@material-ui/icons/Help';
-import { FormControl, Select, MenuItem, CircularProgress } from '@material-ui/core';
+import { FormControl, Select, MenuItem, CircularProgress, Slider, Box } from '@material-ui/core';
 import Popbox from '../components/Popbox';
 import ClickableImage from '../components/ClickableImage';
 import { ConfirmDialog, MultiStepDialog } from '../components/Dialogs';
-import { getMeasurements, calculateRobotSuggestions } from '../util';
+import { getMeasurements, calculateRobotSuggestions, countUserChosenSamples, getExpQueryParam } from '../util';
 import {
   PopboxTypeEnum, resolutionTexts, NUM_OF_HYPOS,
   UserFeedbackState, objectiveOptions, transitionOptions,
+  MAX_USER_SAMPLES, explanationChoiceTexts, decisionConfidenceTexts,
 } from '../constants';
 import { useStateValue, Action } from '../state';
 import ChartPanel from '../components/ChartPanel';
@@ -50,16 +51,28 @@ export const rejectReasonOptionsGlobal:string[] = [];
 
 export default function Main() {
   const [showImgAlert, setImgAlert] = useState(false);
+  const [layoutMode, setLayoutMode] = useState(() => {
+    try {
+      return sessionStorage.getItem('lassieLayoutMode') === 'new' ? 'new' : 'old';
+    } catch (err) {
+      return 'old';
+    }
+  });
+  const [focusedChart, setFocusedChart] = useState<'scatter' | 'dune' | 'reward' | null>(null);
   const [globalState, dispatch] = useStateValue();
 
   const { currSampleIdx, samples, currUserStep, userSteps, chart, chartSettings, explanationChart, explanationChartSettings,
     loadingRobotSuggestions, showRobotSuggestions, disableSubmitButton, numSubmitClicks, 
-    imgClickEnabled, numImgClicks, transectIdx } = globalState;
+    imgClickEnabled, numImgClicks, transectIdx, explanationEnabled } = globalState;
+  const chartRef = React.useRef(chart);
+  const explanationChartRef = React.useRef(explanationChart);
+  chartRef.current = chart;
+  explanationChartRef.current = explanationChart;
 
   const { step, userFeedbackState, objectives, objectiveFreeResponse, sampleType,
     robotSuggestions, spatialReward, variableReward, discrepancyReward, acceptOrRejectOptions, acceptOrReject, 
     rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, rejectExplanationRating,
-    resolutionMethod, transition } = currUserStep;
+    resolutionMethod, transition, desiredWaypoint, decisionConfidence, suggestionOverlapNote, hitSuggestion, matchedSuggestionLabel } = currUserStep;
 
   const history = useHistory();
 
@@ -89,6 +102,76 @@ export default function Main() {
       dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
     }
   }, [userFeedbackState]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('lassieLayoutMode', layoutMode);
+    } catch (err) {}
+    if (layoutMode === 'old') {
+      setFocusedChart(null);
+    }
+  }, [layoutMode]);
+
+  useEffect(() => {
+    const resizeVisuals = () => {
+      window.dispatchEvent(new Event('resize'));
+      try {
+        const liveExplanationChart = explanationChartRef.current as any;
+        const liveChart = chartRef.current as any;
+        if (layoutMode === 'new' && liveExplanationChart && liveExplanationChart.options) {
+          liveExplanationChart.options.maintainAspectRatio = false;
+          liveExplanationChart.options.responsive = true;
+          if (liveExplanationChart.options.title) {
+            liveExplanationChart.options.title.fontSize = focusedChart === 'reward' ? 14 : 11;
+          }
+          if (liveExplanationChart.options.legend && liveExplanationChart.options.legend.labels) {
+            liveExplanationChart.options.legend.labels.fontSize = focusedChart === 'reward' ? 12 : 10;
+            liveExplanationChart.options.legend.labels.boxWidth = 10;
+          }
+          const xAxes = liveExplanationChart.options.scales && liveExplanationChart.options.scales.xAxes;
+          if (xAxes && xAxes[0]) {
+            xAxes[0].ticks = {
+              ...(xAxes[0].ticks || {}),
+              autoSkip: true,
+              maxTicksLimit: focusedChart === 'reward' ? 22 : 11,
+              fontSize: 9,
+              maxRotation: 0,
+              minRotation: 0
+            };
+            if (xAxes[0].scaleLabel) {
+              xAxes[0].scaleLabel.display = focusedChart === 'reward';
+            }
+          }
+          const yAxes = liveExplanationChart.options.scales && liveExplanationChart.options.scales.yAxes;
+          if (yAxes && yAxes[0] && yAxes[0].scaleLabel) {
+            yAxes[0].scaleLabel.display = focusedChart === 'reward';
+          }
+        }
+        if (liveExplanationChart && liveExplanationChart.resize) {
+          liveExplanationChart.resize();
+        } else if (liveExplanationChart && liveExplanationChart.update) {
+          liveExplanationChart.update();
+        }
+        if (liveChart) {
+          Object.keys(liveChart).forEach((key) => {
+            const c = liveChart[key];
+            if (c && c.resize) {
+              c.resize();
+            } else if (c && c.update) {
+              c.update();
+            }
+          });
+        }
+      } catch (err) {}
+    };
+    resizeVisuals();
+    const t = window.setTimeout(resizeVisuals, 80);
+    const t2 = window.setTimeout(resizeVisuals, 320);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(t2);
+    };
+  }, [layoutMode, focusedChart]);
   
   
   // Initial page set up
@@ -118,21 +201,26 @@ export default function Main() {
 
   // Function to add the latest user step data to the finalized set of userSteps 
   const updateUserSteps = () => {
-    let acceptedRobotSuggestion;
-    if (acceptOrReject !== -1 && acceptOrReject !== acceptOrRejectOptions.length - 1) {
-      let robotSuggestionFinal = robotSuggestions[acceptOrReject]; 
-      const { shearValues, moistureValues } = getMeasurements(globalState, transectIdx, robotSuggestionFinal.index, robotSuggestionFinal.measurements);
-      acceptedRobotSuggestion = {...robotSuggestionFinal, shear: shearValues, moisture: moistureValues};
+    let matchedSuggestion = null as any;
+    if (userSample && robotSuggestions) {
+      matchedSuggestion = robotSuggestions.find(s => s.index === userSample.index) || null;
     }
-    let transitionAdj = (!userFreeSelection) ? transition : transition + 1;
+    const inferredHit = !!matchedSuggestion;
+    let acceptedRobotSuggestion = null as any;
+    if (inferredHit && matchedSuggestion) {
+      const { shearValues, moistureValues } = getMeasurements(globalState, transectIdx, matchedSuggestion.index, matchedSuggestion.measurements);
+      acceptedRobotSuggestion = {...matchedSuggestion, shear: shearValues, moisture: moistureValues};
+    }
     let newUserStep : UserStepsData = {
       step: step,
       objectives: JSON.parse(JSON.stringify(objectives)),
       objectiveFreeResponse: objectiveFreeResponse,
-      sampleType: sampleType,
+      sampleType: inferredHit ? 'robot' : sampleType,
       robotSuggestions: robotSuggestions,
-      acceptOrReject: acceptOrReject === -1 ? null : acceptOrRejectOptions[acceptOrReject],
-      acceptedRobotSuggestion: (acceptOrReject !== -1 && acceptOrReject !== acceptOrRejectOptions.length - 1) ? acceptedRobotSuggestion : null,
+      acceptOrReject: inferredHit
+        ? ("Followed suggestion " + String.fromCharCode(robotSuggestions.findIndex(s => s.index === userSample!.index) + 65) + (matchedSuggestion.methodLabel ? (" (" + matchedSuggestion.methodLabel + ")") : ""))
+        : "Did not follow a suggestion",
+      acceptedRobotSuggestion: inferredHit ? acceptedRobotSuggestion : null,
       rejectReason: rejectReason === -1 ? null : rejectReasonOptions[rejectReason],
       rejectReasons: rejectReasons,//Add new change
       rejectReasonsOptions: rejectReasonsOptions, //Add new change
@@ -141,10 +229,15 @@ export default function Main() {
       rejectExplanationRating: 0,
       resolutionMethod: resolutionTexts[resolutionMethod],
       samples: JSON.parse(JSON.stringify(samples)),
-      transition: transitionOptions[transitionAdj],
+      transition: "Mark next desired waypoint",
       spatialReward: spatialReward,
       variableReward: variableReward,
       discrepancyReward: discrepancyReward,
+      desiredWaypoint: desiredWaypoint,
+      decisionConfidence: decisionConfidence >= 0 ? decisionConfidenceTexts[decisionConfidence] : null,
+      suggestionOverlapNote: suggestionOverlapNote,
+      hitSuggestion: inferredHit,
+      matchedSuggestionLabel: inferredHit && matchedSuggestion ? (matchedSuggestion.methodLabel || null) : null,
     }
     dispatch({ type: Action.ADD_USER_STEP, value: newUserStep }); 
   }
@@ -152,12 +245,7 @@ export default function Main() {
   const [confirmConcludeOpen, setConfirmConcludeOpen] = useState(false);
   const [helperOpen, setHelperOpen] = useState(true);
 
-  const onConcludeClick = () => {
-      setConfirmConcludeOpen(true);
-  };
-
-  const onQuit = () => {
-    updateUserSteps(); // Update userSteps 
+  const goToConclusion = () => {
     if (chart) {
       Object.values(chart).forEach(c => {
         if (!c) return;
@@ -167,6 +255,17 @@ export default function Main() {
       });
     }
     history.push('/conclusion');
+  };
+
+  const onConcludeClick = () => {
+      setConfirmConcludeOpen(true);
+  };
+
+  const onQuit = () => {
+    if (userSample || desiredWaypoint) {
+      updateUserSteps();
+    }
+    goToConclusion();
     console.log({globalState});
   };
   // Disable submit button if the user has selected no objectives during the OBJECTIVE step
@@ -180,7 +279,7 @@ export default function Main() {
   // In the RANK_OBJECTIVES step, automatically disable the submit button until the user fills out a valid set of rankings for each selected objective
   // Example of set two group of user input buttons 6/12/2022
   useEffect(() => {
-    if (userFeedbackState === UserFeedbackState.RANK_OBJECTIVES || userFeedbackState === UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS) {
+    if (userFeedbackState === UserFeedbackState.RANK_OBJECTIVES) {
 
       let objectivesRankings : number[] = [];
       let disable = false;
@@ -199,7 +298,23 @@ export default function Main() {
       dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: rejectReasons.length == 0 });
     }
 
-  }, [objectives]);
+    if (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !desiredWaypoint });
+    }
+
+    if (userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !userSample });
+    }
+
+    if (userFeedbackState === UserFeedbackState.DECISION_CONFIDENCE) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: decisionConfidence < 0 });
+    }
+
+    if (userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: explanationEnabled === null });
+    }
+
+  }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled]);
 
 
   const searchObjective = (target : string) => {
@@ -384,8 +499,65 @@ const onObjectiveTextChange = e => {
 
   const userLocationSelectionQuestion = 
     <div className="user-location_selection-question">
-      <p><strong>Please select the next location you'd like to sample from by clicking anywhere along the transect surface in the dune cross-section above. When you have finalized your selection and are ready to collect data from that location, click "Submit."</strong></p>
+      <p><strong>RHex's suggestions are marked with letters (A, B, C) on the dune map. Your planned location is the orange star. Click the location where you want RHex to take the next sample. Then click Submit.</strong></p>
+      {robotSuggestions && robotSuggestions.length > 0 &&
+        <ul style={{ marginTop: 0 }}>
+          {robotSuggestions.map((suggestion, index) => (
+            <li key={suggestion.index}>
+              {String.fromCharCode(index + 65)}: {suggestion.methodLabel || 'RHex suggestion'}
+            </li>
+          ))}
+        </ul>
+      }
+      {suggestionOverlapNote ? <p><em>{suggestionOverlapNote}</em></p> : null}
     </div>
+
+  const desiredWaypointQuestion =
+    <div className="desired-waypoint-question">
+      <p><strong>Click the dune map to mark where you want to sample next. This is your plan. You will see RHex's suggestions after you click Submit.</strong></p>
+    </div>
+
+  const explanationChoiceQuestion =
+    <div className="explanation-choice-question">
+      <p><strong>Do you want to see the explanation chart under the dune map?</strong></p>
+      <RadioButtonGroup options={explanationChoiceTexts} selectedIndex={explanationEnabled === null ? -1 : (explanationEnabled ? 0 : 1)} onChange={i => {
+        dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: i === 0 });
+        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+      }}/>
+    </div>
+
+  const confidenceMarks = decisionConfidenceTexts.map((label, i) => ({ value: i, label }));
+
+  const decisionConfidenceQuestion = layoutMode === 'new' ? (
+    <div className="decision-confidence-question decision-confidence-slider">
+      <p><strong><i>How confident are you in your decision to collect data at the location you just chose?</i></strong></p>
+      <div className="slider-box">
+        <Box px={4}>
+          <Slider
+            value={decisionConfidence >= 0 ? decisionConfidence : 0}
+            min={0}
+            max={6}
+            step={1}
+            marks={confidenceMarks}
+            valueLabelDisplay="off"
+            onChange={(e, val) => {
+              const v = typeof val === 'number' ? val : val[0];
+              dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: v });
+              dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+            }}
+          />
+        </Box>
+      </div>
+    </div>
+  ) : (
+    <div className="decision-confidence-question">
+      <p><strong>How confident are you in your decision to collect data at the location you just chose?</strong></p>
+      <RadioButtonGroup options={decisionConfidenceTexts} selectedIndex={decisionConfidence} onChange={i => {
+        dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: i });
+        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+      }}/>
+    </div>
+  )
 
   // Hook for displaying hypothesis popup
   // Apply new changes 6/7/2022 by Zeyu
@@ -458,7 +630,7 @@ const resMethod =
     
     const tutorial2 = 
     <div className = 'tutorial2'>
-      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
+      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Small circles on the slope are the 22 places you can sample. Click a circle to choose that location. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
     </div>
 
 const tutorial3 = 
@@ -477,6 +649,8 @@ const tutorial4 =
 <div className = 'tutorial4'>
   <p>You will evaluate the collected data against the <span style={{color: 'blue', textDecorationLine: 'underline', cursor: 'pointer'}}><strong><a onClick={() => setHypothesisOpen(true)}>hypothesis</a></strong></span>. 
   </p>
+  <p>You may choose up to {MAX_USER_SAMPLES} sampling locations. You do not have to choose {MAX_USER_SAMPLES}. This maximum is due to the constraints of how many samples can be taken in one day.
+  </p>
   <p>Once you feel you have collected enough data to evaluate the hypothesis, select the “End Collection at Transect” button. This button will appear after you have collected your first sample.
   </p>
 </div>
@@ -488,17 +662,14 @@ const tutorial4 =
     tutorial2,
     tutorial3,
     tutorial4,
-
+    explanationChoiceQuestion,
     objectiveRankings,
     resMethod,
-    objectiveFreeResponseQuestion,
-    acceptOrRejectQuestions,
+    desiredWaypointQuestion,
+    userLocationSelectionQuestion,
     rejectReasonQuestions,
     rejectReasonFreeResponseQuestion,
-    userLocationSelectionQuestion,
-    updateObjectiveRankings,
-    updateResolutionMethod,
-    transitionQuestions,
+    decisionConfidenceQuestion,
   ]
 
   // useEffect(() => {
@@ -510,6 +681,31 @@ const tutorial4 =
     objectivesTemp.sort((a, b) => (a.ranking > b.ranking) ? 1 : -1);
     return objectivesTemp;
   }
+
+  const startDesiredWaypointRound = () => {
+    dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: false });
+    dispatch({ type: Action.SET_DESIRED_WAYPOINT, value: null });
+    dispatch({ type: Action.SET_USER_SAMPLE, value: null });
+    dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: -1 });
+    dispatch({ type: Action.SET_HIT_SUGGESTION, value: false });
+    dispatch({ type: Action.SET_MATCHED_SUGGESTION_LABEL, value: null });
+    dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: "" });
+    dispatch({ type: Action.SET_REJECT_REASON, value: -1 });
+    dispatch({ type: Action.SET_REJECT_REASONS, value: [] });
+    dispatch({ type: Action.SET_REJECT_REASONS_OPTIONS, value: [] });
+    dispatch({ type: Action.SET_REJECT_REASON_FREE_RESPONSE, value: "" });
+    dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: -1 });
+    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+    dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+    dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.DESIRED_WAYPOINT });
+  };
+
+  const goToDecisionConfidence = () => {
+    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
+    dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+    dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: -1 });
+    dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.DECISION_CONFIDENCE });
+  };
 
   const onSubmit = async () => {
     dispatch({ type: Action.SET_NUM_SUBMIT_CLICKS, value: numSubmitClicks + 1 });
@@ -527,300 +723,205 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.TUTORIAL4: {
+        const expParam = getExpQueryParam();
+        if (expParam === 'on' || expParam === 'off') {
+          dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: expParam === 'on' });
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
+        } else {
+          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.EXPLANATION_CHOICE });
+        }
+        return;
+      }
+      case UserFeedbackState.EXPLANATION_CHOICE: {
         dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         return;
       }
-      
       case UserFeedbackState.OBJECTIVE: {
-        if (objectives.length === 1) {
-
-          // Set the rank of the single objective to 1
-          let objectivesTemp = [...objectives];
-          objectivesTemp[0].ranking = 1;
-          dispatch({ type: Action.SET_OBJECTIVES, value: objectivesTemp });
-
-          if (objectives[0].objective === objectiveOptions[4]) {
-            dispatch({ type: Action.SET_OBJECTIVES_FREE_RESPONSE, value: "" });
-            dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.OBJECTIVE_FREE_RESPONSE });
-          } else {
-            
-            dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
-
-            let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
-            
-            const { results, spatialReward, variableReward, discrepancyReward } = robotResults; //5/21 NOTE pick up back here if u want to add index100 to state and explanation chart
-            console.log("logged spatial reward from decision at objective case where it's not free response");
-            console.log(spatialReward);
-            dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
-            dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
-            dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
-            dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
-            console.log("testing");
-            console.log(globalState);
-            console.log("logged global state from decision");
-            console.log(spatialReward);
-            console.log("logged spatial reward from decision")
-
-            dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
-            dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
-            dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: 0 });
-            dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
-            dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
-          }
-        } else {
-          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
-        } 
-        console.log("logging ");
-        console.log({globalState}); // for debugging
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         return;
       }
       case UserFeedbackState.RANK_OBJECTIVES: {
-        // Order the objectives by ranking
         let objectivesTemp = rankObjectives();
         dispatch({ type: Action.SET_OBJECTIVES, value: objectivesTemp });
-        // Check if objectives contains free response option and if this option is ranked the highest
-        let freeResponseRankedHighest = false; 
-        for (let i = 0; i < objectives.length; i++) {
-          if (objectives[i].objective === objectiveOptions[4] && objectives[i].ranking === 1) {
-            freeResponseRankedHighest = true;
-          }
-        }
-        if (freeResponseRankedHighest) {
-          dispatch({ type: Action.SET_OBJECTIVES_FREE_RESPONSE, value: "" });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.OBJECTIVE_FREE_RESPONSE });
-        } else {
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RES_METHOD});
-
-        }
-        console.log({globalState}); // for debugging
+        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RES_METHOD});
         return;
       }
       case UserFeedbackState.RES_METHOD: {
+        startDesiredWaypointRound();
+        return;
+      }
+      case UserFeedbackState.DESIRED_WAYPOINT: {
+        dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
         dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
-
-          let robotResults = await calculateRobotSuggestions(samples, globalState, objectives); //TODO: the objectives argument was previously objectivesTemp (local scope), this might mess things up -- check if objectives is correct way to access the stored temp array from objectiveranking switch case
-         
+        try {
+          let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
           const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
-           console.log("logging state from resolution method");
-          console.log(globalState);
-          console.log("logging spatial reward from resolution method");
-          console.log(spatialReward);
           dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
+          dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: robotResults.overlapNote || "" });
           dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
           dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
           dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
-
           dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
           dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
-
-          dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: 0 });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
-          dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
-          return;
-      }
-      case UserFeedbackState.OBJECTIVE_FREE_RESPONSE: {
-        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-        dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-        dispatch({ type: Action.SET_USER_FREE_SELECTION, value: true });
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
-        dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 });
-        console.log({globalState}); // for debugging
-        return;
-      }
-
-      case UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION: {
-        if (acceptOrReject !== acceptOrRejectOptions.length - 1) {
-          let robotSample = robotSuggestions[acceptOrReject]; 
-          const { shearValues, moistureValues } = getMeasurements(globalState, transectIdx, robotSample.index, robotSample.measurements);
-          let newSample : Sample = {...robotSample, shear: shearValues, moisture: moistureValues};
-          dispatch({ type: Action.ADD_SAMPLE, value: newSample }); // add the new sample to the StateContext
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
-          dispatch({ type: Action.SET_SAMPLE_TYPE, value: 'robot'});
-        } else {
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.REJECT_REASON });
-        }
-        dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: false });
-        console.log({globalState}); // for debugging
-        return;
-      }
-      // Select the reason why the use reject their belefs
-      case UserFeedbackState.REJECT_REASON: {
-        // [0,1,2] convert to -> str[0,1,2]
-        // Apply new chanegs by Zeyu 6/13/2022
-        // if the user select first option, then they will redirect to the following dispatch action, which will lead them to user free selection
-        if (rejectReasonsOptions.includes(rejectReasonOptions[rejectReasonOptions.length - 1])) { // Otherwise, the user will select 'I rejected the suggested location for a different reason.', there will be textbox for the user
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.REJECT_REASON_FREE_RESPONSE });
-        } else {
+          dispatch({ type: Action.SET_USER_SAMPLE, value: null });
           dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
           dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-          dispatch({ type: Action.SET_USER_FREE_SELECTION, value: true });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
-          dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 });
+        } catch (err) {
+          console.log(err);
+          dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !desiredWaypoint });
+        } finally {
+          dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
         }
-        console.log({globalState}); // for debugging
-        return;
-      }
-      case UserFeedbackState.REJECT_REASON_FREE_RESPONSE: {
-        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-        dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-        dispatch({ type: Action.SET_USER_FREE_SELECTION, value: true });
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
-        dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 });
-        console.log({globalState}); // for debugging
         return;
       }
       case UserFeedbackState.USER_LOCATION_SELECTION: {
+        if (!userSample) {
+          return;
+        }
         dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
-        dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 }); // load the next Sample into the charts and strategy 
-        dispatch({ type: Action.SET_SAMPLE_TYPE, value: 'user'});
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS });
-        console.log({globalState}); // for debugging
+        const matched = robotSuggestions.find(s => s.index === userSample.index);
+        dispatch({ type: Action.SET_HIT_SUGGESTION, value: !!matched });
+        dispatch({ type: Action.SET_MATCHED_SUGGESTION_LABEL, value: matched ? (matched.methodLabel || null) : null });
+        dispatch({ type: Action.SET_SAMPLE_TYPE, value: matched ? 'robot' : 'user' });
+        if (matched) {
+          goToDecisionConfidence();
+        } else {
+          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.REJECT_REASON });
+        }
         return;
       }
-      case UserFeedbackState.UPDATE_OBJECTIVE_RANKINGS: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.UPDATE_RES_METHOD});
+      case UserFeedbackState.REJECT_REASON: {
+        if (rejectReasonsOptions.includes(rejectReasonOptions[rejectReasonOptions.length - 1])) {
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.REJECT_REASON_FREE_RESPONSE });
+        } else {
+          goToDecisionConfidence();
+        }
         return;
-
       }
-      case UserFeedbackState.UPDATE_RES_METHOD: {
-        //LUCKY copied from case where transitionAdj is 0:
-        dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
-
-          let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
-          const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
-          console.log("logging state from update resolution method");
-          console.log(globalState);
-          console.log("logging spatial reward from update resolution method");
-          console.log(spatialReward)
-
-          dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
-          dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
-          dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
-          dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
-
-          dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
-          dispatch({ type: Action.SET_USER_FREE_SELECTION, value: false });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.ACCEPT_OR_REJECT_SUGGESTION });
-          dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
-          //dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-          dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
-
-          //LUCKY all done if not 3 (in all cases except quitting):
-          dispatch({ type: Action.SET_USER_STEP_IDX, value: step + 1});
-          dispatch({ type: Action.SET_OBJECTIVES_FREE_RESPONSE, value: ""});
-          dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: -1 });
-          dispatch({ type: Action.SET_REJECT_REASON, value: -1 });
-          dispatch({ type: Action.SET_REJECT_REASON_FREE_RESPONSE, value: ""});
-          dispatch({ type: Action.SET_USER_SAMPLE, value: null });
-          // dispatch({ type: Action.SET_TRANSITION, value: 0 }); // Set default option pointing to if the user didn't choose *ignore*. - Zeyu 5/18/2022
-          // console.log("hello"); for debugging
-          updateUserSteps();
-          
-
-          //LUCKY removed all cases for different transition options because there is only one option for the new workflow
-
-        //let transitionAdj = (!userFreeSelection) ? transition : transition + 1;
-        //console.log({globalState, transitionAdj});
-        
-        // **Transition Adjustment** is used to align the transition options from transition variabite in constant.ts between 
-        // userFreeSelection being true or false, and thus we can apply the same logic for the functions below - Zeyu & Steven 5/18/2022
-
-        // Move to the next round with the same objectives as the previous round and automatically run
-        // the robot calculation 
-
-        // Move to the next round with the same objectives as the previous round and automatically run
-        // the robot calculation 
-        // if (transitionAdj === 0) {
-          
-        // // Move to the next round with the objectives reset and ask the user to reselect the objectives
-        // } else if (transitionAdj === 1) {
-        //   dispatch({ type: Action.SET_OBJECTIVES, value: [] });
-        //   dispatch({ type: Action.SET_USER_FREE_SELECTION, value: false });
-        //   dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.OBJECTIVE });
-        //   dispatch({ type: Action.SET_SAMPLE_TYPE, value: null});
-        //   dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: [] });
-        //   dispatch({ type: Action.SET_SPATIAL_REWARD, value: [] });
-        //   dispatch({ type: Action.SET_VARIABLE_REWARD, value: [] });
-        //   dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: [] });
-
-        // // Move to the next round enabling the user to freely select the next sample location
-        // } else if (transitionAdj === 2) {
-        //   dispatch({ type: Action.SET_OBJECTIVES, value: [] });
-        //   dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-        //   dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-        //   dispatch({ type: Action.SET_USER_FREE_SELECTION, value: true });// **Set the default opton pointing to "ignore" if the user selected it. - Zeyu & Steven 5/18/2022
-        //   dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
-        //   dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 });
-        //   dispatch({ type: Action.SET_SAMPLE_TYPE, value: 'user'});
-        //   dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: [] });
-        //   dispatch({ type: Action.SET_SPATIAL_REWARD, value: [] });
-        //   dispatch({ type: Action.SET_VARIABLE_REWARD, value: [] });
-        //   dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: [] });
-
-        // // Bring up the quit screen
-        // } else if (transitionAdj === 3) {
-        //   onConcludeClick();
-        // }
-
-        // // If the user selects any option besides the quit screen, then automatically add the data
-        // // from the current step to the finalized userSteps and reset some of the currUserStep data
-        // if (transitionAdj !== 3) {
-          
-        // }
-        console.log({globalState}); // for debugging
+      case UserFeedbackState.REJECT_REASON_FREE_RESPONSE: {
+        goToDecisionConfidence();
+        return;
+      }
+      case UserFeedbackState.DECISION_CONFIDENCE: {
+        dispatch({ type: Action.SET_NUM_IMG_CLICKS, value: 0 });
+        updateUserSteps();
+        dispatch({ type: Action.SET_USER_STEP_IDX, value: step + 1});
+        dispatch({ type: Action.SET_OBJECTIVES_FREE_RESPONSE, value: ""});
+        dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: -1 });
+        dispatch({ type: Action.SET_REJECT_REASON, value: -1 });
+        dispatch({ type: Action.SET_REJECT_REASONS, value: [] });
+        dispatch({ type: Action.SET_REJECT_REASONS_OPTIONS, value: [] });
+        dispatch({ type: Action.SET_REJECT_REASON_FREE_RESPONSE, value: ""});
+        dispatch({ type: Action.SET_USER_SAMPLE, value: null });
+        dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: -1 });
+        if (countUserChosenSamples(samples) >= MAX_USER_SAMPLES) {
+          goToConclusion();
+          return;
+        }
+        startDesiredWaypointRound();
         return;
       }
     }
   }
 
+
   const clickableImageTip = "Please select a location on the transect to sample from between the crest and interdune";
   const clickableImageTipStyle = {
       fontSize: '12px'
   }
+  const userChosenSampleCount = countUserChosenSamples(samples);
+  const clickIsForMap = userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION || userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT;
+  const showExplanationChart =
+    explanationEnabled !== false ||
+    userFeedbackState <= UserFeedbackState.EXPLANATION_CHOICE;
+
+  useEffect(() => {
+    if (!showExplanationChart && focusedChart === 'reward') {
+      setFocusedChart(null);
+    }
+  }, [showExplanationChart, focusedChart]);
+
+  const toggleChartFocus = (id: 'scatter' | 'dune' | 'reward') => {
+    setFocusedChart(prev => prev === id ? null : id);
+  };
+
+  const chartExpandButton = (id: 'scatter' | 'dune' | 'reward') => (
+    <button
+      type="button"
+      className={`chartExpandBtn ${focusedChart === id ? 'isOpen' : ''}`}
+      title={focusedChart === id ? 'Restore chart size' : 'Enlarge chart'}
+      aria-label={focusedChart === id ? 'Restore chart size' : 'Enlarge chart'}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleChartFocus(id);
+      }}
+    >
+      {focusedChart === id ? (
+        <span aria-hidden="true">×</span>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+          <polyline points="15 3 21 3 21 9" />
+          <polyline points="9 21 3 21 3 15" />
+          <line x1="21" y1="3" x2="14" y2="10" />
+          <line x1="3" y1="21" x2="10" y2="14" />
+        </svg>
+      )}
+    </button>
+  );
 
   // Right panel to display when collecting data, sampleState != FINISH_TRANSECT
   const collectionRightPanel = (
     <div className="collectionRightPanel">
       <ImgAlert open={!!showImgAlert} />
-      <Tooltip title={userFeedbackState !== UserFeedbackState.USER_LOCATION_SELECTION ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
+      <div className="sampleCountInline" style={{ textAlign: 'center', fontSize: '13px', marginBottom: '6px' }}>
+        Samples collected: {userChosenSampleCount} of {MAX_USER_SAMPLES}
+      </div>
+      <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
       <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
-            <ClickableImage width={750} enabled={imgClickEnabled} addDataFunc={() => addDataToPlot()} setPopOver={setImgAlert} />  
+            <ClickableImage
+              width={750}
+              enabled={imgClickEnabled}
+              addDataFunc={() => addDataToPlot()}
+              setPopOver={setImgAlert}
+              clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
+            />  
           </div>
       </Tooltip>
-      {/* <div>
-        <BarChart isBarMode = {true}/>
-      </div> */}
-      <div className={`explanationPanel`}>
+      <div className={`explanationPanel`} style={{ display: showExplanationChart ? undefined : 'none' }}>
       <ExplanationPanel/>
       </div>
-      
+    </div>
+  );
 
-      {!loadingRobotSuggestions && <div className={numSubmitClicks === 0 ? "user-feedback-flashing" : "user-feedback"}>
+  const userFeedbackPanel = !loadingRobotSuggestions ? (
+      <div className={numSubmitClicks === 0 ? "user-feedback-flashing" : "user-feedback"}>
+        <div key={userFeedbackState}>
         {userFeedbackStateMap[userFeedbackState]}
+        </div>
         <div className="submit-user-feedback-button">
           <Button disabled={disableSubmitButton} variant="contained" color="secondary" onClick={onSubmit}>
             Submit
           </Button>
         </div>
         <br></br>
-        { (userFeedbackState === 16 || userFeedbackState === 15 || userFeedbackState === 14)  && (
+        { userChosenSampleCount >= 1 && (
         <div className="quit">
           <Button className="quitButton" variant="contained" color="primary" onClick={onConcludeClick}>
             End Collection At Transect
           </Button>
         </div>
       )}
-        {/* <div className="quit">
-        <Button className="quitButton" variant="contained" color="primary"  onClick={onConcludeClick}>
-          End Collection At Transect
-        </Button>
-      </div> */}
-      </div>}
-      {loadingRobotSuggestions && <div className="loading-screen">
+      </div>
+  ) : (
+      <div className="loading-screen">
         <div className="loading-section">
           <i>
-            RHex is determining where to sample from next. This should take at most 5-10 seconds...
+            RHex is determining where to sample from next. This may take 15-30 seconds...
           </i>
         </div>
         <div className="loading-section">
@@ -829,9 +930,7 @@ const tutorial4 =
             size={100}
           />
         </div>
-      </div>}
-      
-    </div>
+      </div>
   );
 
   // Popup for displaying instructions on the decision page
@@ -875,10 +974,27 @@ const tutorial4 =
   }
 
   return (
-    <div id="app" className="decisionPage">
+    <div id="app" className={`decisionPage layout-${layoutMode}`}>
       { helperOpen && <Helper /> }
       { decisionHypothesisDialog }
       { decisionHelpDialog }
+
+      <div className="layoutToggle" title="Demo only: switch page layout">
+        <span className="layoutToggleLabel">Layout</span>
+        <button type="button" className={layoutMode === 'old' ? 'active' : ''} onClick={() => setLayoutMode('old')}>Old</button>
+        <button type="button" className={layoutMode === 'new' ? 'active' : ''} onClick={() => setLayoutMode('new')}>New</button>
+      </div>
+
+      <div className="decisionTopBar">
+        <div className="decisionTopBarCount">
+          Samples collected: {userChosenSampleCount} of {MAX_USER_SAMPLES}
+        </div>
+        { userChosenSampleCount >= 1 && (
+          <Button className="quitButton" variant="contained" color="primary" onClick={onConcludeClick}>
+            End Collection At Transect
+          </Button>
+        )}
+      </div>
 
       {userFeedbackState === UserFeedbackState.TUTORIAL1 && (
   <div className="tutorial-arrow" style={{ transform: 'rotate(225deg)' }} />  
@@ -886,15 +1002,6 @@ const tutorial4 =
  {userFeedbackState === UserFeedbackState.TUTORIAL3 && (
           <div className="tutorial-arrow2"/>
         )}
-
-
-{/* 
-{userFeedbackState === UserFeedbackState.TUTORIAL1 && (
-  <div className="tutorial-arrow">
-    <div className="arrow-stem" />
-    <div className="arrow-head" />
-  </div>
-)} */}
 
       <ConfirmDialog
         open={confirmConcludeOpen}
@@ -908,9 +1015,11 @@ const tutorial4 =
         onOk={onQuit}
       />
 
+      <div className={`decisionMain${layoutMode === 'new' ? ` chartFocus-${focusedChart || 'none'}${showExplanationChart ? '' : ' no-reward'}` : ''}`}>
+      {layoutMode === 'old' ? (
       <Grid container>
         <Grid container>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={6} className="leftDecisionPanel">
             <ChartPanel fullSize={true} mode={"TransectView"}/>
           </Grid>
           <Grid item xs={12} md={6} className="rightDecisionPanel">
@@ -925,6 +1034,38 @@ const tutorial4 =
           </Grid>
         </Grid>
       </Grid>
+      ) : (
+        <React.Fragment>
+          <div className={`chartCard chartCard-scatter${userFeedbackState === UserFeedbackState.TUTORIAL1 ? ' tutorial-oval' : ''}`}>
+            {chartExpandButton('scatter')}
+            <ChartPanel fullSize={true} mode={"TransectView"}/>
+          </div>
+          <div className={`chartCard chartCard-dune${userFeedbackState === UserFeedbackState.TUTORIAL2 ? ' tutorial-oval' : ''}`}>
+            {chartExpandButton('dune')}
+            <ImgAlert open={!!showImgAlert} />
+            <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
+              <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
+                <ClickableImage
+                  width={750}
+                  enabled={imgClickEnabled}
+                  addDataFunc={() => addDataToPlot()}
+                  setPopOver={setImgAlert}
+                  clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
+                  fitContainer={true}
+                />
+              </div>
+            </Tooltip>
+          </div>
+          {showExplanationChart && (
+            <div className={`chartCard chartCard-reward${userFeedbackState === UserFeedbackState.TUTORIAL3 ? ' tutorial-oval' : ''}`}>
+              {chartExpandButton('reward')}
+              <ExplanationPanel/>
+            </div>
+          )}
+        </React.Fragment>
+      )}
+      </div>
+      { userFeedbackPanel }
     </div>
   );
 }
