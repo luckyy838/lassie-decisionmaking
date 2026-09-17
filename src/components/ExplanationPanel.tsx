@@ -39,7 +39,7 @@ export default function ExplanationChartPanel() {
       }
       debounceId = window.setTimeout(() => {
         applyExplanationChartLayout(explanationChartRef.current);
-      }, 280);
+      }, 300);
     };
     const observer = typeof (window as any).ResizeObserver !== 'undefined'
       ? new (window as any).ResizeObserver(fit)

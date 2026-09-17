@@ -426,7 +426,8 @@ export const explanationChartOption = {
     title: {
       display: true,
       text: "Reward Value for Each Objective Across Transect",
-      fontStyle: "bold"
+      fontStyle: "bold",
+      padding: 2
     },
     maintainAspectRatio: false,
     responsive: false,
@@ -437,7 +438,7 @@ export const explanationChartOption = {
       labels: {
         fontSize: 10,
         boxWidth: 12,
-        padding: 6,
+        padding: 4,
         usePointStyle: false
       }
     },
@@ -455,6 +456,10 @@ export const explanationChartOption = {
     animation: { duration: 0 },
     hover: { animationDuration: 0 },
     responsiveAnimationDuration: 0,
+    annotation: {
+      drawTime: 'afterDatasetsDraw',
+      annotations: []
+    },
     scales: {
       yAxes: [{
         position: 'left',
@@ -472,6 +477,7 @@ export const explanationChartOption = {
       }],
       xAxes: [{
         type: 'linear',
+        id: 'x-axis-0',
         position: 'bottom',
         scaleLabel: {
           display: true,
@@ -482,6 +488,9 @@ export const explanationChartOption = {
           min: 0,
           max: 99,
           stepSize: 1
+        },
+        gridLines: {
+          display: false
         }
       }]
     }

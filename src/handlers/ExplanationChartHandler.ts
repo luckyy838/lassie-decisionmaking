@@ -1,7 +1,8 @@
 import * as Chart from 'chart.js';
 //import * as BarChart from chart
 import { Action, IState, ExplanationChart } from '../state';
-import { explanationChartOption } from '../constants';
+import { explanationChartOption, sampleLocations, NORMALIZED_HEIGHT } from '../constants';
+import { notifyTransectGuides } from '../components/TransectAlignGuides';
 import 'chartjs-plugin-annotation';
 
 
@@ -37,11 +38,177 @@ const BoldTickUnderlayPlugin = {
 
 Chart.plugins.register(BoldTickUnderlayPlugin);
 
+const SuggestionLabelPlugin = {
+  id: 'suggestionLabels',
+  afterDraw(chart) {
+    const anns = (chart.options.annotation && chart.options.annotation.annotations) || [];
+    if (!anns.length) {
+      return;
+    }
+    const xScale = chart.scales['x-axis-0'];
+    const area = chart.chartArea;
+    if (!xScale || !area) {
+      return;
+    }
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#111';
+    const fontSize = Math.max(9, Math.round((Chart.defaults.global.defaultFontSize || 12) * 0.95));
+    ctx.font = `bold ${fontSize}px ${Chart.defaults.global.defaultFontFamily}`;
+    const labelY = area.bottom + 3;
+    anns.forEach(a => {
+      const content = a && (a.insideLabel || (a.label && a.label.content));
+      if (!a || a.value == null || !content) {
+        return;
+      }
+      const x = xScale.getPixelForValue(a.value);
+      ctx.fillText(String(content), x, labelY);
+    });
+    ctx.restore();
+  }
+};
+
+Chart.plugins.register(SuggestionLabelPlugin);
+
+const REWARD_X_MAX = 99;
+const MARKER_BOTTOM_PAD = 18;
+const NUM_WAYPOINTS = 22;
+
+function waypointToRewardX(waypointIndex: number) {
+  if (NUM_WAYPOINTS <= 1) {
+    return 0;
+  }
+  return (waypointIndex * REWARD_X_MAX) / (NUM_WAYPOINTS - 1);
+}
+
+function readPadding(chart: any) {
+  const pad = (chart.options.layout && chart.options.layout.padding) || {};
+  if (typeof pad === 'number') {
+    return { top: pad, right: pad, bottom: pad, left: pad };
+  }
+  return {
+    top: pad.top || 0,
+    right: pad.right || 0,
+    bottom: pad.bottom || 0,
+    left: pad.left || 0
+  };
+}
+
+function alignRewardPlotToDune(chart: any) {
+  const img = document.getElementById('pos-picker');
+  const host = document.getElementById('clickable-image') || img;
+  const canvas = chart.canvas as HTMLCanvasElement;
+  if (!img || !host || !canvas || !chart.chartArea) {
+    return false;
+  }
+  const imgRect = img.getBoundingClientRect();
+  const hostRect = host.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+  if (imgRect.height < 40 || canvasRect.width < 40) {
+    return false;
+  }
+  const first = sampleLocations[0];
+  const last = sampleLocations[sampleLocations.length - 1];
+  // Same overlay mapping as ClickableImage: loc[0] * height / NORMALIZED_HEIGHT
+  const overlayScale = imgRect.height / NORMALIZED_HEIGHT;
+  const crestX = hostRect.left + first[0] * overlayScale;
+  const endX = hostRect.left + last[0] * overlayScale;
+  const desiredLeftCss = crestX - canvasRect.left;
+  const desiredRightCss = endX - canvasRect.left;
+  if (desiredRightCss - desiredLeftCss < 60) {
+    return false;
+  }
+
+  const chartW = chart.width || canvasRect.width;
+  const cssToChart = chartW / canvasRect.width;
+  const desiredLeft = desiredLeftCss * cssToChart;
+  const desiredRight = desiredRightCss * cssToChart;
+
+  const area = chart.chartArea;
+  const pad = readPadding(chart);
+  let newL = pad.left + (desiredLeft - area.left);
+  let newR = pad.right + (area.right - desiredRight);
+  const minPlot = 80;
+  const maxTotal = chartW - minPlot;
+  newL = Math.max(0, newL);
+  newR = Math.max(0, newR);
+  if (newL + newR > maxTotal) {
+    const scale = maxTotal / (newL + newR);
+    newL *= scale;
+    newR *= scale;
+  }
+  if (Math.abs(newL - pad.left) < 1 && Math.abs(newR - pad.right) < 1) {
+    return false;
+  }
+  chart.options.layout = chart.options.layout || {};
+  chart.options.layout.padding = {
+    top: pad.top,
+    bottom: pad.bottom,
+    left: newL,
+    right: newR
+  };
+  return true;
+}
+
+function setSuggestionMarkers(chart: any, robotSuggestions: any[]) {
+  if (!chart || !chart.options) {
+    return;
+  }
+  const grouped: { [index: number]: string[] } = {};
+  (robotSuggestions || []).forEach((s, k) => {
+    if (!s || typeof s.index !== 'number') {
+      return;
+    }
+    if (!grouped[s.index]) {
+      grouped[s.index] = [];
+    }
+    grouped[s.index].push(String.fromCharCode(k + 65));
+  });
+  const highlights = Object.keys(grouped).map((key) => {
+    const idx = Number(key);
+    return {
+      value: waypointToRewardX(idx),
+      lineColor: '#111',
+      lineWidth: 1.5,
+      insideLabel: grouped[idx].join('/')
+    };
+  });
+  chart.options.annotation = chart.options.annotation || {};
+  chart.options.annotation.annotations = buildAnnotations(highlights);
+  const pad = readPadding(chart);
+  if (highlights.length && pad.bottom < MARKER_BOTTOM_PAD) {
+    chart.options.layout = chart.options.layout || {};
+    chart.options.layout.padding = {
+      ...pad,
+      bottom: MARKER_BOTTOM_PAD
+    };
+  }
+}
+
 export function applyExplanationChartLayout(chart: any) {
   if (!chart || !chart.options || !chart.ctx) {
     return;
   }
   try {
+  if (!chart.options.events || !chart.options.events.length) {
+    chart.options.events = ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove', 'touchend'];
+    if (chart.bindEvents) {
+      chart.bindEvents();
+    }
+  }
+  chart.options.hover = chart.options.hover || {};
+  chart.options.hover.animationDuration = 0;
+  if (chart.options.elements && chart.options.elements.point) {
+    chart.options.elements.point.hoverRadius = 4;
+    chart.options.elements.point.hoverBorderWidth = 1;
+  }
+  if (chart.data && chart.data.datasets) {
+    chart.data.datasets.forEach((ds) => {
+      ds.pointHoverRadius = 4;
+    });
+  }
   const parent = document.getElementById('explanationChartParent');
   const w = parent ? parent.clientWidth : 0;
   const h = parent ? parent.clientHeight : 0;
@@ -50,14 +217,18 @@ export function applyExplanationChartLayout(chart: any) {
   }
   const prevW = chart._lassieLayoutW || 0;
   const prevH = chart._lassieLayoutH || 0;
-  if (Math.abs(prevW - w) < 2 && Math.abs(prevH - h) < 2) {
-    return;
-  }
-  chart._lassieLayoutW = w;
-  chart._lassieLayoutH = h;
+  const sizeChanged = Math.abs(prevW - w) >= 4 || Math.abs(prevH - h) >= 4;
+  if (sizeChanged) {
+    chart._lassieLayoutW = w;
+    chart._lassieLayoutH = h;
 
   chart.options.maintainAspectRatio = false;
   chart.options.responsive = false;
+  chart.options.hover = { animationDuration: 0 };
+  if (chart.options.elements && chart.options.elements.point) {
+    chart.options.elements.point.hoverRadius = 4;
+    chart.options.elements.point.hoverBorderWidth = 1;
+  }
 
   const scale = Math.max(0.38, Math.min(1.05, Math.min(h / 220, w / 420)));
   const compact = h < 150;
@@ -70,7 +241,7 @@ export function applyExplanationChartLayout(chart: any) {
   chart.options.title = chart.options.title || {};
   chart.options.title.display = true;
   chart.options.title.fontSize = titleSize;
-  chart.options.title.padding = tiny ? 0 : (compact ? 1 : 4);
+  chart.options.title.padding = tiny ? 0 : (compact ? 1 : 2);
   chart.options.title.text = 'Reward Value for Each Objective Across Transect';
 
   chart.options.legend = {
@@ -81,7 +252,7 @@ export function applyExplanationChartLayout(chart: any) {
       fontSize: legendSize,
       fontStyle: 'normal',
       boxWidth: boxW,
-      padding: tiny ? 2 : (compact ? 4 : 6),
+      padding: tiny ? 2 : (compact ? 3 : 4),
       usePointStyle: false
     }
   };
@@ -89,23 +260,35 @@ export function applyExplanationChartLayout(chart: any) {
     chart.options.plugins.legend.display = false;
   }
 
+  const hasMarkers = !!(chart.options.annotation && chart.options.annotation.annotations && chart.options.annotation.annotations.length);
+  const bottomPad = hasMarkers ? (tiny ? 14 : MARKER_BOTTOM_PAD) : (tiny ? 0 : (compact ? 0 : 2));
+  const pad = readPadding(chart);
   chart.options.layout = chart.options.layout || {};
-  chart.options.layout.padding = tiny
-    ? { top: 0, right: 2, bottom: 0, left: 0 }
-    : (compact ? { top: 0, right: 4, bottom: 0, left: 0 } : { top: 2, right: 6, bottom: 2, left: 2 });
+  chart.options.layout.padding = {
+    top: tiny ? 0 : (compact ? 1 : 2),
+    bottom: bottomPad,
+    left: pad.left,
+    right: pad.right
+  };
 
   const xAxes = chart.options.scales && chart.options.scales.xAxes;
   if (xAxes && xAxes[0]) {
     xAxes[0].ticks = {
       ...(xAxes[0].ticks || {}),
       display: false,
+      min: 0,
+      max: REWARD_X_MAX,
       fontSize: axisSize,
       maxRotation: 0,
       minRotation: 0,
       padding: tiny ? 0 : 3
     };
+    xAxes[0].gridLines = {
+      ...(xAxes[0].gridLines || {}),
+      display: false
+    };
     if (xAxes[0].scaleLabel) {
-      xAxes[0].scaleLabel.display = !compact;
+      xAxes[0].scaleLabel.display = !compact && !hasMarkers;
       xAxes[0].scaleLabel.fontSize = axisSize;
       xAxes[0].scaleLabel.padding = compact ? 0 : 4;
       xAxes[0].scaleLabel.labelString = 'Transect';
@@ -133,6 +316,18 @@ export function applyExplanationChartLayout(chart: any) {
   if (chart.update) {
     chart.update(0);
   }
+  }
+  let aligned = false;
+  if (alignRewardPlotToDune(chart) && chart.update) {
+    aligned = true;
+    chart.update(0);
+    if (alignRewardPlotToDune(chart) && chart.update) {
+      chart.update(0);
+    }
+  }
+  if (sizeChanged || aligned) {
+    notifyTransectGuides();
+  }
   } catch (err) {}
 }
 
@@ -143,10 +338,10 @@ function buildAnnotations(highlights: Array<{ index?: number; value?: number | s
   return (highlights || [])
     .map(h => {
       let xVal: number | string | undefined;
-      if (typeof h.index === 'number') {
-        xVal = h.index;
-      } else if (h.value != null) {
+      if (h.value != null) {
         xVal = h.value;
+      } else if (typeof h.index === 'number') {
+        xVal = h.index;
       } else {
         return null;
       }
@@ -158,15 +353,11 @@ function buildAnnotations(highlights: Array<{ index?: number; value?: number | s
         value: xVal,
         borderColor: h.lineColor || 'black',
         borderWidth: h.lineWidth || 2,
-        label: h.insideLabel
-          ? {
-              enabled: true,
-              content: h.insideLabel,
-              position: 'top',
-              backgroundColor: 'rgba(0, 0, 0, 0.45)',
-              fontColor: '#fff'
-            }
-          : {}
+        insideLabel: h.insideLabel || '',
+        label: {
+          enabled: false,
+          content: h.insideLabel || ''
+        }
       };
     })
     .filter(Boolean) as any[];
@@ -260,30 +451,15 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
 
     explanationChart.data.datasets[1].data = discrepancyRewardFormat;
 
-    const xMax = Math.max(
-      spatialRewardFormat.length ? spatialRewardFormat[spatialRewardFormat.length - 1].x : 21,
-      discrepancyRewardFormat.length ? discrepancyRewardFormat[discrepancyRewardFormat.length - 1].x : 21
-    );
     if (explanationChart.options && explanationChart.options.scales && explanationChart.options.scales.xAxes && explanationChart.options.scales.xAxes[0]) {
       explanationChart.options.scales.xAxes[0].ticks = {
         ...(explanationChart.options.scales.xAxes[0].ticks || {}),
         min: 0,
-        max: xMax
+        max: REWARD_X_MAX
       };
     }
 
-    const dynamicHighlights = Array.isArray(robotSuggestions)
-  ? robotSuggestions.map((s, k) => (
-    
-     {
-      index: s.index, //supposed to be s.index TODO
-      lineColor: '#000',
-      lineWidth: 2,
-      insideLabel: `${String.fromCharCode(k + 65)}`
-    }))
-  : [];
-
-//setHighlights(explanationChart, dynamicHighlights); NOTE 5/20 uncomment later
+    setSuggestionMarkers(explanationChart, robotSuggestions);
      
     } else {
       //console.log("chart.shearChart undefined");

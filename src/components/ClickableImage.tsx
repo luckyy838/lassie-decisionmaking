@@ -29,33 +29,16 @@ const useStyles = makeStyles({
     display: 'block',
     margin: 'auto',
   },
-  tick: {
+  sampleDot: {
     position: 'absolute',
     width: 10,
     height: 10,
     marginLeft: -5,
     marginTop: -5,
     borderRadius: '50%',
-    border: '2px solid #114B5F',
-    backgroundColor: '#fff',
     boxSizing: 'border-box',
     zIndex: 3,
-    padding: 0,
-    minWidth: 10,
-    appearance: 'none',
-    WebkitAppearance: 'none',
-    outline: 'none',
-  },
-  tickEnabled: {
-    cursor: 'pointer',
-  },
-  tickHover: {
-    width: 14,
-    height: 14,
-    marginLeft: -7,
-    marginTop: -7,
-    backgroundColor: '#e0f4f7',
-    borderColor: '#028090',
+    pointerEvents: 'none',
   },
 });
 
@@ -98,7 +81,6 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
   });
   width = width || NORMALIZED_WIDTH;
   const [clickIndex, setClickIndex] = useState(0);
-  const [hoveredTick, setHoveredTick] = useState(-1);
   const [imgEl, setImgEl] = useState<HTMLImageElement>();
   // Obtain DOM element
   // It's wrong to store the height/width only
@@ -114,7 +96,16 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
   const { samples, currUserStep, numImgClicks, transectIdx, showRobotSuggestions, showNOMInput } = globalState;
   const { robotSuggestions, desiredWaypoint, userSample } = currUserStep;
   const mode = clickMode || 'sample';
-  const visitedIndexes = samples.map(s => s.index);
+  const uniqueVisitedSamples: Sample[] = [];
+  const seenVisited = {};
+  for (let i = 0; i < samples.length; i++) {
+    const idx = samples[i].index;
+    if (seenVisited[idx]) {
+      continue;
+    }
+    seenVisited[idx] = true;
+    uniqueVisitedSamples.push(samples[i]);
+  }
 
   const [height, setHeight] = useState(0);
   useLayoutEffect(() => {
@@ -204,7 +195,15 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
       setTimeout(() => setPopOver(null), POPOVER_TIME);
       return;
     }
-    selectLocation(index, offsetX, offsetY, normOffsetX, normOffsetY);
+    const snapX = sampleLocations[index][0];
+    const snapY = sampleLocations[index][1];
+    selectLocation(
+      index,
+      snapX * height / NORMALIZED_HEIGHT,
+      snapY * height / NORMALIZED_HEIGHT,
+      snapX,
+      snapY
+    );
   }
 
   const selectLocation = (index, offsetX, offsetY, normOffsetX, normOffsetY) => {
@@ -284,17 +283,6 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
     });
   }
 
-  const onTickClick = (ev, index) => {
-    ev.stopPropagation();
-    ev.preventDefault();
-    if (!enabled) {
-      return;
-    }
-    const left = sampleLocations[index][0] * height / NORMALIZED_HEIGHT;
-    const top = sampleLocations[index][1] * height / NORMALIZED_HEIGHT;
-    selectLocation(index, left, top, sampleLocations[index][0], sampleLocations[index][1]);
-  }
-
   return (
     <div id="clickable-image" style={{ position: 'relative' }} >
       <img
@@ -304,38 +292,20 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
         src={diagram}
         onClick={onImageClick}
       />
-      {imgEl && height > 0 && sampleLocations.map((loc, index) => {
-        const isVisited = visitedIndexes.indexOf(index) !== -1;
-        const isHovered = hoveredTick === index;
-        const isSelected = (!!userSample && userSample.index === index)
-          || (!!desiredWaypoint && desiredWaypoint.index === index);
-        const locColor = locationColors[index];
-        const tickStyle: React.CSSProperties = {
-          left: loc[0] * height / NORMALIZED_HEIGHT,
-          top: loc[1] * height / NORMALIZED_HEIGHT,
-        };
-        if (isVisited) {
-          tickStyle.backgroundColor = locColor;
-          tickStyle.borderColor = locColor;
-        }
-        if (isSelected) {
-          tickStyle.borderColor = locColor;
-          tickStyle.boxShadow = '0 0 0 2px ' + locColor;
-          if (!isVisited) {
-            tickStyle.backgroundColor = '#fff';
-          }
-        }
+      {imgEl && height > 0 && uniqueVisitedSamples.map((sample) => {
+        const loc = sampleLocations[sample.index] || [sample.normOffsetX, sample.normOffsetY];
+        const locColor = locationColors[sample.index];
         return (
-          <button
-            key={'tick-' + index}
-            type="button"
-            title={'Sampling location ' + (index + 1)}
-            className={`${classes.tick} ${enabled ? classes.tickEnabled : ''} ${isHovered && !isVisited && !isSelected ? classes.tickHover : ''}`}
-            style={tickStyle}
-            disabled={!enabled}
-            onClick={ev => onTickClick(ev, index)}
-            onMouseEnter={() => setHoveredTick(index)}
-            onMouseLeave={() => setHoveredTick(-1)}
+          <span
+            key={'sampled-' + sample.index}
+            className={classes.sampleDot}
+            title={'Sampled location'}
+            style={{
+              left: loc[0] * height / NORMALIZED_HEIGHT,
+              top: loc[1] * height / NORMALIZED_HEIGHT,
+              backgroundColor: locColor,
+              border: '2px solid ' + locColor,
+            }}
           />
         );
       })}
@@ -387,9 +357,9 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
             position: 'absolute',
             left: snap[0] * height / NORMALIZED_HEIGHT,
             top: snap[1] * height / NORMALIZED_HEIGHT,
-            transform: 'translate(-50%, calc(-100% - 6px))',
+            transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
-            zIndex: 6,
+            zIndex: 2,
           }}
           title="Your planned location"
         >

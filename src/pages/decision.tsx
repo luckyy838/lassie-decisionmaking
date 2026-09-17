@@ -22,6 +22,7 @@ import {
 import { useStateValue, Action } from '../state';
 import ChartPanel from '../components/ChartPanel';
 import ExplanationPanel from '../components/ExplanationPanel';
+import TransectAlignGuides from '../components/TransectAlignGuides';
 // import BarChart from '../components/BarChart';
 import "../styles/decision.scss";
 import { CurrUserStepData, UserStepsData, Sample, PreSample } from '../types';
@@ -58,7 +59,7 @@ export default function Main() {
       return 'old';
     }
   });
-  const [focusedChart, setFocusedChart] = useState<'scatter' | 'dune' | 'reward' | null>(null);
+  const [focusedChart, setFocusedChart] = useState<'scatter' | 'dune' | 'transect' | null>(null);
   const [globalState, dispatch] = useStateValue();
 
   const { currSampleIdx, samples, currUserStep, userSteps, chart, chartSettings, explanationChart, explanationChartSettings,
@@ -130,13 +131,33 @@ export default function Main() {
     };
     resizeScatter();
     const t = window.setTimeout(resizeScatter, 80);
-    const t2 = window.setTimeout(() => {
+    let finished = false;
+    const finishReward = () => {
+      if (finished) {
+        return;
+      }
+      finished = true;
       resizeScatter();
       applyExplanationChartLayout(explanationChartRef.current);
-    }, 300);
+    };
+    const main = document.querySelector('.decisionPage.layout-new .decisionMain');
+    const onTransitionEnd = (ev: any) => {
+      const prop = ev && ev.propertyName ? String(ev.propertyName) : '';
+      if (prop && prop.indexOf('grid-template') === -1) {
+        return;
+      }
+      finishReward();
+    };
+    if (main) {
+      main.addEventListener('transitionend', onTransitionEnd);
+    }
+    const fallback = window.setTimeout(finishReward, 320);
     return () => {
       window.clearTimeout(t);
-      window.clearTimeout(t2);
+      window.clearTimeout(fallback);
+      if (main) {
+        main.removeEventListener('transitionend', onTransitionEnd);
+      }
     };
   }, [layoutMode, focusedChart]);
   
@@ -597,7 +618,7 @@ const resMethod =
     
     const tutorial2 = 
     <div className = 'tutorial2'>
-      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Small circles on the slope are the 22 places you can sample. Click a circle to choose that location. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
+      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Click anywhere along the slope surface to choose a location. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
     </div>
 
 const tutorial3 = 
@@ -807,16 +828,19 @@ const tutorial4 =
     userFeedbackState <= UserFeedbackState.EXPLANATION_CHOICE;
 
   useEffect(() => {
-    if (!showExplanationChart && focusedChart === 'reward') {
+    if (!showExplanationChart && focusedChart === 'transect') {
       setFocusedChart(null);
+    }
+    if (showExplanationChart && focusedChart === 'dune') {
+      setFocusedChart('transect');
     }
   }, [showExplanationChart, focusedChart]);
 
-  const toggleChartFocus = (id: 'scatter' | 'dune' | 'reward') => {
+  const toggleChartFocus = (id: 'scatter' | 'dune' | 'transect') => {
     setFocusedChart(prev => prev === id ? null : id);
   };
 
-  const chartExpandButton = (id: 'scatter' | 'dune' | 'reward') => (
+  const chartExpandButton = (id: 'scatter' | 'dune' | 'transect') => (
     <button
       type="button"
       className={`chartExpandBtn ${focusedChart === id ? 'isOpen' : ''}`}
@@ -1007,26 +1031,45 @@ const tutorial4 =
             {chartExpandButton('scatter')}
             <ChartPanel fullSize={true} mode={"TransectView"}/>
           </div>
-          <div className={`chartCard chartCard-dune${userFeedbackState === UserFeedbackState.TUTORIAL2 ? ' tutorial-oval' : ''}`}>
-            {chartExpandButton('dune')}
-            <ImgAlert open={!!showImgAlert} />
-            <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
-              <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
-                <ClickableImage
-                  width={750}
-                  enabled={imgClickEnabled}
-                  addDataFunc={() => addDataToPlot()}
-                  setPopOver={setImgAlert}
-                  clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
-                  fitContainer={true}
-                />
+          {showExplanationChart ? (
+            <div className="chartStack-transect">
+              {chartExpandButton('transect')}
+              <div className={`chartCard chartCard-dune${userFeedbackState === UserFeedbackState.TUTORIAL2 ? ' tutorial-oval' : ''}`}>
+                <ImgAlert open={!!showImgAlert} />
+                <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
+                  <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
+                    <ClickableImage
+                      width={750}
+                      enabled={imgClickEnabled}
+                      addDataFunc={() => addDataToPlot()}
+                      setPopOver={setImgAlert}
+                      clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
+                      fitContainer={true}
+                    />
+                  </div>
+                </Tooltip>
               </div>
-            </Tooltip>
-          </div>
-          {showExplanationChart && (
-            <div className={`chartCard chartCard-reward${userFeedbackState === UserFeedbackState.TUTORIAL3 ? ' tutorial-oval' : ''}`}>
-              {chartExpandButton('reward')}
-              <ExplanationPanel/>
+              <div className={`chartCard chartCard-reward${userFeedbackState === UserFeedbackState.TUTORIAL3 ? ' tutorial-oval' : ''}`}>
+                <ExplanationPanel/>
+              </div>
+              <TransectAlignGuides />
+            </div>
+          ) : (
+            <div className={`chartCard chartCard-dune${userFeedbackState === UserFeedbackState.TUTORIAL2 ? ' tutorial-oval' : ''}`}>
+              {chartExpandButton('dune')}
+              <ImgAlert open={!!showImgAlert} />
+              <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
+                <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
+                  <ClickableImage
+                    width={750}
+                    enabled={imgClickEnabled}
+                    addDataFunc={() => addDataToPlot()}
+                    setPopOver={setImgAlert}
+                    clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
+                    fitContainer={true}
+                  />
+                </div>
+              </Tooltip>
             </div>
           )}
         </React.Fragment>
