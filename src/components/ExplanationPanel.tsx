@@ -11,21 +11,20 @@ export default function ExplanationChartPanel() {
   const { explanationChartSettings, explanationChart } = globalState;
   const explanationChartRef = useRef(explanationChart);
   explanationChartRef.current = explanationChart;
-  //const [currentTab, setCurrentTab] = useState(0);
-  //const [showOptions, setShowOptions] = useState(false); //?????
-  //const [displayOption, setDisplayOption] = useState(chartSettings.mode);
-
-  if (explanationChartSettings.updateRequired) {
-      console.log("updating chart, logging global state");
-      console.log(globalState);
-      updateExplanationChart(globalState, dispatch);
-      dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: false} });
-  }
+  const globalStateRef = useRef(globalState);
+  globalStateRef.current = globalState;
 
   useEffect(() => {
-      initializeExplanationChart(globalState, dispatch);
-      updateExplanationChart(globalState, dispatch);
-  }, [explanationChartSettings]);
+      initializeExplanationChart(globalStateRef.current, dispatch);
+  }, []);
+
+  useEffect(() => {
+    if (!explanationChartSettings.updateRequired) {
+      return;
+    }
+    updateExplanationChart(globalStateRef.current, dispatch);
+    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: false} });
+  }, [explanationChartSettings.updateRequired]);
 
   useEffect(() => {
     const parent = document.getElementById('explanationChartParent');

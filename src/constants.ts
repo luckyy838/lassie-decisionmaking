@@ -214,6 +214,7 @@ export const resolutionMethodShortNames = [
 export const explanationChoiceTexts = [
   'With explanation',
   'Without explanation',
+  'Random',
 ];
 
 export const decisionConfidenceTexts = [

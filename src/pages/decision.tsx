@@ -13,7 +13,7 @@ import { FormControl, Select, MenuItem, CircularProgress, Slider, Box } from '@m
 import Popbox from '../components/Popbox';
 import ClickableImage from '../components/ClickableImage';
 import { ConfirmDialog, MultiStepDialog } from '../components/Dialogs';
-import { getMeasurements, calculateRobotSuggestions, countUserChosenSamples, getExpQueryParam } from '../util';
+import { getMeasurements, calculateRobotSuggestions, countUserChosenSamples, getExpQueryParam, assignBalancedExplanation } from '../util';
 import {
   PopboxTypeEnum, resolutionTexts, NUM_OF_HYPOS,
   UserFeedbackState, objectiveOptions, transitionOptions,
@@ -60,6 +60,7 @@ export default function Main() {
     }
   });
   const [focusedChart, setFocusedChart] = useState<'scatter' | 'dune' | 'transect' | null>(null);
+  const [explanationChoiceIndex, setExplanationChoiceIndex] = useState(-1);
   const [globalState, dispatch] = useStateValue();
 
   const { currSampleIdx, samples, currUserStep, userSteps, chart, chartSettings, explanationChart, explanationChartSettings,
@@ -299,10 +300,10 @@ export default function Main() {
     }
 
     if (userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE) {
-      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: explanationEnabled === null });
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: explanationChoiceIndex < 0 });
     }
 
-  }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled]);
+  }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled, explanationChoiceIndex]);
 
 
   const searchObjective = (target : string) => {
@@ -508,8 +509,8 @@ const onObjectiveTextChange = e => {
   const explanationChoiceQuestion =
     <div className="explanation-choice-question">
       <p><strong>Do you want to see the explanation chart under the dune map?</strong></p>
-      <RadioButtonGroup options={explanationChoiceTexts} selectedIndex={explanationEnabled === null ? -1 : (explanationEnabled ? 0 : 1)} onChange={i => {
-        dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: i === 0 });
+      <RadioButtonGroup options={explanationChoiceTexts} selectedIndex={explanationChoiceIndex} onChange={i => {
+        setExplanationChoiceIndex(i);
         dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
       }}/>
     </div>
@@ -714,6 +715,7 @@ const tutorial4 =
         const expParam = getExpQueryParam();
         if (expParam === 'on' || expParam === 'off') {
           dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: expParam === 'on' });
+          dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: expParam === 'on' ? 'with' : 'without' });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         } else {
           dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
@@ -722,6 +724,20 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.EXPLANATION_CHOICE: {
+        let enabled = false;
+        let choice: 'with' | 'without' | 'random' = 'without';
+        if (explanationChoiceIndex === 0) {
+          enabled = await assignBalancedExplanation(true);
+          choice = 'with';
+        } else if (explanationChoiceIndex === 1) {
+          enabled = await assignBalancedExplanation(false);
+          choice = 'without';
+        } else {
+          enabled = await assignBalancedExplanation();
+          choice = 'random';
+        }
+        dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: enabled });
+        dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: choice });
         dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         return;
       }

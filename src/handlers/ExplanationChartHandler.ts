@@ -83,6 +83,42 @@ function waypointToRewardX(waypointIndex: number) {
   return (waypointIndex * REWARD_X_MAX) / (NUM_WAYPOINTS - 1);
 }
 
+function readRewardYRange(chart: any) {
+  let lo = Infinity;
+  let hi = -Infinity;
+  const datasets = (chart.data && chart.data.datasets) || [];
+  datasets.forEach((ds) => {
+    (ds.data || []).forEach((pt) => {
+      const y = typeof pt === 'number' ? pt : (pt && pt.y);
+      if (typeof y === 'number' && isFinite(y)) {
+        if (y < lo) lo = y;
+        if (y > hi) hi = y;
+      }
+    });
+  });
+  if (!isFinite(lo) || !isFinite(hi)) {
+    return { min: 0, max: 1, stepSize: 0.1 };
+  }
+  const base = Math.min(lo, 0);
+  const span = Math.max(hi - base, 0.1);
+  const pad = Math.max(span * 0.08, 0.04);
+  const min = lo >= 0 ? 0 : Math.floor((lo - pad) * 10) / 10;
+  let max = Math.ceil((hi + pad) * 10) / 10;
+  if (max <= min) {
+    max = min + 0.1;
+  }
+  const range = max - min;
+  let stepSize = 0.1;
+  if (range > 2) {
+    stepSize = 0.5;
+  } else if (range > 1.2) {
+    stepSize = 0.2;
+  } else if (range <= 0.4) {
+    stepSize = 0.05;
+  }
+  return { min, max, stepSize };
+}
+
 function readPadding(chart: any) {
   const pad = (chart.options.layout && chart.options.layout.padding) || {};
   if (typeof pad === 'number') {
@@ -296,11 +332,13 @@ export function applyExplanationChartLayout(chart: any) {
   }
   const yAxes = chart.options.scales && chart.options.scales.yAxes;
   if (yAxes && yAxes[0]) {
+    const yRange = readRewardYRange(chart);
     yAxes[0].ticks = {
       ...(yAxes[0].ticks || {}),
       display: !tiny,
-      min: 0,
-      max: 1.1,
+      min: yRange.min,
+      max: yRange.max,
+      stepSize: yRange.stepSize,
       fontSize: axisSize
     };
     if (yAxes[0].scaleLabel) {
@@ -316,6 +354,16 @@ export function applyExplanationChartLayout(chart: any) {
   if (chart.update) {
     chart.update(0);
   }
+  }
+  const yAxesLive = chart.options.scales && chart.options.scales.yAxes;
+  if (yAxesLive && yAxesLive[0]) {
+    const yRange = readRewardYRange(chart);
+    yAxesLive[0].ticks = {
+      ...(yAxesLive[0].ticks || {}),
+      min: yRange.min,
+      max: yRange.max,
+      stepSize: yRange.stepSize
+    };
   }
   let aligned = false;
   if (alignRewardPlotToDune(chart) && chart.update) {
@@ -381,74 +429,26 @@ function setHighlights(explanationChart: any, highlights: Array<{ index?: number
 
 
 export const updateExplanationChart = (globalState: IState, dispatch: any) => {
-    const { explanationChartSettings, currUserStep } = globalState;
-    const { variableReward, spatialReward, discrepancyReward, robotSuggestions} = currUserStep;
+    const { currUserStep } = globalState;
+    const { spatialReward, discrepancyReward, robotSuggestions} = currUserStep;
 
-    console.log(robotSuggestions);
-    console.log("robotSuggestions from explanation chart ");
     let { explanationChart } = globalState;
-  
-    if (!explanationChart) return;
-    
-    clearExplanationChart(explanationChart);
-    explanationChart = initializeExplanationChart(globalState, dispatch);
-  
-    if (explanationChart === null) {
+    const canvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
+    const chartIsLive = explanationChart && explanationChart.ctx && canvas && explanationChart.canvas === canvas;
+    if (!chartIsLive) {
+      explanationChart = initializeExplanationChart(globalState, dispatch);
+    }
+    if (!explanationChart) {
       return;
     }
-  
-    // const shearDataPoints = [] as any[];
-    // const moistureDataPoints = [] as any[];
-    // const shearMoistureDataPoints = [] as any[];
-  
-    // for (let rowIndex = 0; rowIndex < samples.length; rowIndex++) {
-    //   const row = samples[rowIndex];
-    //   const { index, moisture, shear } = row;
-  
-    //   // Create data for shear to moisture chart
-    //   let shearMoisture : any[] = [];
-    //   for (let i = 0; i < moisture.length; i++) {
-    //     shearMoisture.push({shear: shear[i], moisture: moisture[i]});
-    //   }
-  
-    //   // Map x value from just the section of the slope to [0, 1]
-    //   const xVal = (row.normOffsetX - NORMALIZED_CREST_RANGE.min) / (NORMALIZED_CREST_RANGE.max - NORMALIZED_CREST_RANGE.min);
-    //   //const { shearValues, moistureValues, shearMoistureValues } = getMeasurements(globalState, transectIdx, index, measurements);
-    //   const averageShearValue = mean(shear);
-    //   const averageMoistureValue = mean(moisture);
-  
-    //   if (chartSettings.mode === ChartDisplayMode.RAW) {
-    //     shear.forEach(value => pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index));
-    //     moisture.forEach(value => pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index));
-    //     shearMoisture.forEach(value => pushChartArrayValue(shearMoistureDataPoints, value.moisture, value.shear, rowIndex, currSampleIdx, index));
-    //   } else if (chartSettings.mode === ChartDisplayMode.AVERAGE) {
-    //     pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), averageShearValue, rowIndex, currSampleIdx,index);
-    //     pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), averageMoistureValue, rowIndex, currSampleIdx, index);
-    //     pushChartArrayValue(shearMoistureDataPoints, averageMoistureValue, averageShearValue, rowIndex, currSampleIdx, index);
-    //   }
-    // }
-    console.log("update explanation chart called");
-  
-    if (explanationChart) {
-      console.log(spatialReward);
-      console.log("logged spatial reward from explanation chart");
-      console.log(currUserStep);
-      //spatial
-      const spatialRewardFormat = (spatialReward && spatialReward.length)
-        ? spatialReward.map((j,i) => ({x: i, y: j}))
-        : [];
-      explanationChart.data.datasets[0].data = spatialRewardFormat;
 
-      console.log("data 0 from explanation chart handler" + explanationChart.data.datasets[0].data)
-   // discrepancy - green
-
-   console.log("logging discrepancy reward from explanation chart");
-   console.log(discrepancyReward);
-   const discrepancyRewardFormat = (discrepancyReward && discrepancyReward.length)
-     ? discrepancyReward.map((j,i) => ({x: i, y: j}))
-     : [];
-      console.log("formatted discrepancy reward" + discrepancyRewardFormat);
-
+    const spatialRewardFormat = (spatialReward && spatialReward.length)
+      ? spatialReward.map((j,i) => ({x: i, y: j}))
+      : [];
+    const discrepancyRewardFormat = (discrepancyReward && discrepancyReward.length)
+      ? discrepancyReward.map((j,i) => ({x: i, y: j}))
+      : [];
+    explanationChart.data.datasets[0].data = spatialRewardFormat;
     explanationChart.data.datasets[1].data = discrepancyRewardFormat;
 
     if (explanationChart.options && explanationChart.options.scales && explanationChart.options.scales.xAxes && explanationChart.options.scales.xAxes[0]) {
@@ -460,31 +460,26 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     }
 
     setSuggestionMarkers(explanationChart, robotSuggestions);
-     
-    } else {
-      //console.log("chart.shearChart undefined");
-    }
-  
-    // if (chart.shearChartMap) {
-    //   chart.shearChartMap.data.datasets[0].data = shearDataPoints;
-    //   chart.moistChartMap.data.datasets[0].data = moistureDataPoints;
-    //   chart.shearMoistChartMap.data.datasets[0].data = shearMoistureDataPoints;
-    // } else {
-    //   //console.log("chart.shearChartMap undefined");
-    // }
-  
     applyExplanationChartLayout(explanationChart);
+    if (explanationChart.update) {
+      explanationChart.update(0);
+    }
     dispatch({
         type: Action.SET_EXPLANATION_CHART,
         value: explanationChart
     });
   }
-
+  
 
 
 export const initializeExplanationChart = (globalState: IState, dispatch: any) : ExplanationChart => {
 
     let { explanationChart } = globalState;
+    const existingCanvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
+    if (explanationChart && explanationChart.ctx && existingCanvas && explanationChart.canvas === existingCanvas) {
+      applyExplanationChartLayout(explanationChart);
+      return explanationChart;
+    }
     try {
       clearExplanationChart(explanationChart);
     } catch (e) {
@@ -528,7 +523,17 @@ export const initializeExplanationChart = (globalState: IState, dispatch: any) :
 
   
       if (explanationCtx) {
-        explanationChart = new Chart(explanationCtx, explanationChartOption as any);
+        explanationChart = new Chart(explanationCtx, {
+          type: explanationChartOption.type,
+          data: {
+            labels: [],
+            datasets: explanationChartOption.data.datasets.map((ds: any) => ({
+              ...ds,
+              data: []
+            }))
+          },
+          options: explanationChartOption.options
+        } as any);
         applyExplanationChartLayout(explanationChart);
       }
     }
@@ -612,13 +617,24 @@ const initialHighlights = Array.isArray(robotSuggestions) && robotSuggestions.le
 
 
 export const clearExplanationChart = (chart) => {
-    resetCanvas(); // reset the chart canvases
-    if (!chart) return;
-    chart.destroy();
-    // Object.values(chart).forEach((c: any) => {
-    //   if (!c) return; 
-    //   c.destroy();
-    // });
+    if (chart) {
+      try {
+        chart.destroy();
+      } catch (e) {}
+    }
+    const canvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
+    if (canvas && (Chart as any).instances) {
+      const instances = (Chart as any).instances;
+      Object.keys(instances).forEach((key) => {
+        const inst = instances[key];
+        if (inst && inst.canvas === canvas) {
+          try {
+            inst.destroy();
+          } catch (e) {}
+        }
+      });
+    }
+    resetCanvas();
   }
   
 
@@ -627,19 +643,16 @@ var resetCanvas = function(){
     if (!parent) {
       return;
     }
-    let explanationCanvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
-    if (!explanationCanvas || explanationCanvas.parentNode !== parent) {
-      explanationCanvas = document.createElement('canvas');
-      explanationCanvas.id = 'explanationChart';
-      parent.appendChild(explanationCanvas);
+    const oldCanvas = document.getElementById('explanationChart');
+    if (oldCanvas && oldCanvas.parentNode) {
+      oldCanvas.parentNode.removeChild(oldCanvas);
     }
+    const explanationCanvas = document.createElement('canvas');
+    explanationCanvas.id = 'explanationChart';
     explanationCanvas.style.display = 'block';
     explanationCanvas.style.width = '100%';
     explanationCanvas.style.height = '100%';
-    const w = parent.clientWidth || 600;
-    const h = parent.clientHeight || 200;
-    explanationCanvas.width = w;
-    explanationCanvas.height = h;
+    parent.appendChild(explanationCanvas);
   };
 
 
