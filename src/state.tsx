@@ -65,7 +65,8 @@ export interface IState {
   showNOMInput: boolean,
   introCompleted: boolean,
   submitted: boolean,
-  explanationEnabled: boolean | null
+  explanationEnabled: boolean | null,
+  explanationChoice: 'with' | 'without' | 'random' | null
 }
 
 // Default initial state
@@ -138,6 +139,7 @@ export const initialState : IState = {
   introCompleted: false,
   submitted: false,
   explanationEnabled: null,
+  explanationChoice: null,
 };
 
 export type IAction = { type: any, value?: any }
@@ -196,6 +198,7 @@ export enum Action {
     SET_INTRO_STATUS,
     SET_SUBMITTED_STATUS, // Executed when user submits final responses
     SET_EXPLANATION_ENABLED,
+    SET_EXPLANATION_CHOICE,
     SET_DESIRED_WAYPOINT,
     SET_DECISION_CONFIDENCE,
     SET_SUGGESTION_OVERLAP_NOTE,
@@ -232,6 +235,7 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_INTRO_STATUS]: 'introCompleted',
   [Action.SET_SUBMITTED_STATUS]: 'submitted',
   [Action.SET_EXPLANATION_ENABLED]: 'explanationEnabled',
+  [Action.SET_EXPLANATION_CHOICE]: 'explanationChoice',
 };
 
 type SubReducer<T> = (subState: T, state: Readonly<IState>, action: IAction) => T;

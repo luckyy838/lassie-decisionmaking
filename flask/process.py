@@ -13,6 +13,11 @@ from multiObjectiveDecisionMaking.multi_objective_tools import *
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 import numpy as np
+import json
+import random
+import sqlite3
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -135,6 +140,107 @@ def process():
 
     print('robot suggests waypoint:', final_suggestion, 'visited excluded:', np.flatnonzero(visited).tolist())
     return jsonify(output)
+
+
+BALANCE_FILE = os.path.join(os.path.dirname(__file__), 'explanation_balance.json')
+_balance_lock = threading.Lock()
+
+
+def _read_explanation_balance():
+    if not os.path.exists(BALANCE_FILE):
+        return {'withCount': 0, 'withoutCount': 0}
+    try:
+        with open(BALANCE_FILE, 'r') as f:
+            data = json.load(f)
+        return {
+            'withCount': int(data.get('withCount') or 0),
+            'withoutCount': int(data.get('withoutCount') or 0),
+        }
+    except Exception:
+        return {'withCount': 0, 'withoutCount': 0}
+
+
+@app.route('/assign_explanation', methods=['POST'])
+@cross_origin()
+def assign_explanation():
+    inputs = request.get_json(force=True, silent=True) or {}
+    forced = inputs.get('forced', None)
+    with _balance_lock:
+        balance = _read_explanation_balance()
+        with_count = balance['withCount']
+        without_count = balance['withoutCount']
+        if forced is True:
+            enabled = True
+        elif forced is False:
+            enabled = False
+        elif with_count < without_count:
+            enabled = True
+        elif without_count < with_count:
+            enabled = False
+        else:
+            enabled = random.random() < 0.5
+        if enabled:
+            with_count += 1
+        else:
+            without_count += 1
+        with open(BALANCE_FILE, 'w') as f:
+            json.dump({'withCount': with_count, 'withoutCount': without_count}, f)
+    print('explanation assignment:', 'with' if enabled else 'without',
+          'forced=', forced, 'counts=', with_count, without_count)
+    return jsonify({
+        'enabled': enabled,
+        'withCount': with_count,
+        'withoutCount': without_count,
+    })
+
+
+DB_FILE = os.path.join(os.path.dirname(__file__), 'lassie_local.db')
+_db_lock = threading.Lock()
+
+
+def init_local_db():
+    with _db_lock:
+        conn = sqlite3.connect(DB_FILE)
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at INTEGER NOT NULL,
+                explanation_enabled INTEGER,
+                explanation_choice TEXT,
+                payload TEXT NOT NULL
+            )
+            '''
+        )
+        conn.commit()
+        conn.close()
+
+
+init_local_db()
+
+
+@app.route('/sessions', methods=['POST'])
+@cross_origin()
+def save_session():
+    payload = request.get_json(force=True, silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'expected a JSON object'}), 400
+    created_at = int(time.time() * 1000)
+    enabled = payload.get('explanationEnabled')
+    enabled_int = None if enabled is None else (1 if enabled else 0)
+    choice = payload.get('explanationChoice')
+    choice_text = choice if isinstance(choice, str) else None
+    with _db_lock:
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.execute(
+            'INSERT INTO sessions (created_at, explanation_enabled, explanation_choice, payload) VALUES (?, ?, ?, ?)',
+            (created_at, enabled_int, choice_text, json.dumps(payload)),
+        )
+        conn.commit()
+        row_id = cur.lastrowid
+        conn.close()
+    print('saved local session', row_id)
+    return jsonify({'id': row_id, 'createdAt': created_at})
 
 
 if __name__ == '__main__':

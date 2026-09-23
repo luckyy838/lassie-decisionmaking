@@ -1,7 +1,7 @@
 import {  FormControl, Select, MenuItem, Button } from '@material-ui/core';
 import * as React from 'react';
 import { useState } from 'react';
-import { putItem } from '../dbHelper';
+import { saveLocalSession } from '../util';
 import { useStateValue, Action } from '../state';
 import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupHorizontal from '../components/RadioButtonGroupHorizontal';
@@ -338,7 +338,7 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 
 export default function Survey() {
     const [globalState, dispatch] = useStateValue();
-    const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled } = globalState;
+    const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled, explanationChoice } = globalState;
     const [page, setPage] = useState(0);
     const [answers, setAnswers] = useState({} as SurveyAnswers);
     const setAnswer = (id: string, answer: string) => {
@@ -353,15 +353,13 @@ export default function Survey() {
         const log = {
             dataVersion: dataVersion,
             explanationEnabled: explanationEnabled,
+            explanationChoice: explanationChoice,
             conclusionFreeResponse: conclusionFreeResponse,
             userSteps: userSteps,
             surveyResponses: surveyOutput
         };
-        putItem(JSON.stringify(log), function(err, data) {
-            if (err) {
-                console.log('Err', err);
-            }
-            console.log(data);
+        saveLocalSession(log).catch((err) => {
+            console.log('Err', err);
         });
     }
 

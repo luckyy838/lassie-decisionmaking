@@ -267,6 +267,50 @@ export function getExpQueryParam(): string | null {
   return new URLSearchParams(hash.slice(qIndex)).get('exp');
 }
 
+/** Assign with/without on the Flask server so counts stay near 50/50 across users. */
+export function assignBalancedExplanation(forced?: boolean | null): Promise<boolean> {
+  return fetch('http://127.0.0.1:5000/assign_explanation', {
+    method: 'POST',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      forced: forced === true ? true : (forced === false ? false : null)
+    }),
+  }).then(res => {
+    if (!res.ok) {
+      throw new Error(`Flask /assign_explanation failed: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  }).then(data => {
+    return !!data.enabled;
+  }).catch(() => {
+    return Math.random() < 0.5;
+  });
+}
+
+/** Save a finished session into the local SQLite file served by Flask. */
+export function saveLocalSession(log: object): Promise<void> {
+  return fetch('http://127.0.0.1:5000/sessions', {
+    method: 'POST',
+    mode: 'cors',
+    cache: 'no-cache',
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(log),
+  }).then(res => {
+    if (!res.ok) {
+      throw new Error(`Flask /sessions failed: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  }).then(() => undefined);
+}
+
 function objectiveRepre(primaryIsCoverage: boolean, methodIndex: number): number {
   if (primaryIsCoverage) {
     if (methodIndex === 0) return 0;
