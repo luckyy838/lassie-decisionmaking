@@ -18,9 +18,11 @@ import random
 import sqlite3
 import threading
 import time
+import hashlib
+import hmac
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, allow_headers=['Content-Type', 'Authorization'])
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 reported_balance_type = {
@@ -212,11 +214,113 @@ def init_local_db():
             )
             '''
         )
+        columns = [row[1] for row in conn.execute('PRAGMA table_info(sessions)')]
+        if 'deleted_at' not in columns:
+            conn.execute('ALTER TABLE sessions ADD COLUMN deleted_at INTEGER')
         conn.commit()
         conn.close()
 
 
 init_local_db()
+
+ADMIN_USER = 'admin'
+ADMIN_PASSWORD = 'lassie-admin'
+_ADMIN_SECRET = b'lassie-local-admin'
+
+
+def _make_admin_token():
+    expires = int(time.time()) + 12 * 60 * 60
+    body = f'{ADMIN_USER}.{expires}'
+    sig = hmac.new(_ADMIN_SECRET, body.encode(), hashlib.sha256).hexdigest()
+    return f'{body}.{sig}'
+
+
+def _admin_authorized():
+    header = request.headers.get('Authorization') or ''
+    if not header.startswith('Bearer '):
+        return False
+    token = header[7:]
+    parts = token.split('.')
+    if len(parts) != 3:
+        return False
+    user, expires, sig = parts
+    try:
+        expires_n = int(expires)
+    except ValueError:
+        return False
+    body = f'{user}.{expires}'
+    expected = hmac.new(_ADMIN_SECRET, body.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        return False
+    if expires_n < int(time.time()) or user != ADMIN_USER:
+        return False
+    return True
+
+
+def _require_admin():
+    if _admin_authorized():
+        return None
+    return jsonify({'error': 'unauthorized'}), 401
+
+
+def _session_dict(row):
+    payload = {}
+    try:
+        payload = json.loads(row['payload'])
+    except Exception:
+        payload = {}
+    enabled = row['explanation_enabled']
+    return {
+        'id': row['id'],
+        'createdAt': row['created_at'],
+        'explanationEnabled': None if enabled is None else bool(enabled),
+        'explanationChoice': row['explanation_choice'],
+        'payload': payload,
+    }
+
+
+@app.route('/admin/login', methods=['POST'])
+@cross_origin()
+def admin_login():
+    body = request.get_json(force=True, silent=True) or {}
+    user = body.get('username')
+    password = body.get('password')
+    if user != ADMIN_USER or password != ADMIN_PASSWORD:
+        return jsonify({'error': 'invalid login'}), 401
+    return jsonify({'token': _make_admin_token()})
+
+
+@app.route('/admin/sessions', methods=['GET'])
+@cross_origin()
+def list_sessions():
+    denied = _require_admin()
+    if denied:
+        return denied
+    with _db_lock:
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            'SELECT id, created_at, explanation_enabled, explanation_choice, payload FROM sessions WHERE deleted_at IS NULL ORDER BY id DESC'
+        ).fetchall()
+        conn.close()
+    return jsonify({'sessions': [_session_dict(row) for row in rows]})
+
+
+@app.route('/admin/sessions/<int:session_id>/delete', methods=['POST'])
+@cross_origin()
+def delete_session(session_id):
+    denied = _require_admin()
+    if denied:
+        return denied
+    with _db_lock:
+        conn = sqlite3.connect(DB_FILE)
+        conn.execute(
+            'UPDATE sessions SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL',
+            (int(time.time() * 1000), session_id),
+        )
+        conn.commit()
+        conn.close()
+    return jsonify({'ok': True})
 
 
 @app.route('/sessions', methods=['POST'])
