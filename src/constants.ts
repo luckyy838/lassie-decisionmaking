@@ -1,4 +1,5 @@
 import * as Chart from 'chart.js';
+import { conclusionPointKey, conclusionPointRing } from './conclusionPointRing';
 //import { RGBAtoRGB } from './util';
 
 // These should match the canvas dimensions used in "transectDiagramPoints.html"
@@ -786,7 +787,7 @@ export const shearMoistChartOption = {
   options: {
       title: {
         display: true,
-        text: "Shear Strength vs Moisture Percentage",
+        text: "Soil Penetration Strength vs Soil Moisture",
         fontStyle: "bold"
       },
       responsive: true,
@@ -801,7 +802,10 @@ export const shearMoistChartOption = {
           hoverBorderWidth: 0,
           backgroundColor(context) {
             const { dataIndex, dataset } = context;
-            const point = dataset.data[dataIndex];
+            const point = dataset && dataset.data && dataset.data[dataIndex];
+            if (!point) {
+              return locationColors[0];
+            }
             return locationColors[point.index];
           }
         }
@@ -821,7 +825,7 @@ export const shearMoistChartOption = {
             id: 'moisture',
             scaleLabel: {
               display: true,
-              labelString: 'Shear Strength'
+              labelString: 'Soil Penetration Strength'
             },
             ticks: {
               min: 0,
@@ -833,7 +837,7 @@ export const shearMoistChartOption = {
               position: 'bottom',
               scaleLabel: {
                 display: true,
-                labelString: 'Moisture Percentage'
+                labelString: 'Soil Moisture (%)'
               },
               ticks: {
                 min: 0,
@@ -938,6 +942,38 @@ export const grainChartOption = {
 };
 
 export const batteryWarningLevels: number[] = [0.75, 0.90, 0.95];
+
+// Ring sits outside the dot, and only for points chosen on the conclusion pages.
+Chart.pluginService.register({
+  afterDatasetsDraw: function (chart: any) {
+    if (!conclusionPointRing.active) {
+      return;
+    }
+    const dataset = chart.data.datasets && chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    const ctx = chart.ctx;
+    if (!dataset || !meta || !meta.data || !ctx) {
+      return;
+    }
+    ctx.save();
+    ctx.strokeStyle = conclusionPointRing.color;
+    ctx.lineWidth = 2.5;
+    dataset.data.forEach((point, i) => {
+      if (!point || !conclusionPointRing.keys[conclusionPointKey(point.rowIndex, point.measurementIndex)]) {
+        return;
+      }
+      const el = meta.data[i];
+      const vm = el && (el._view || el._model);
+      if (!vm || vm.skip) {
+        return;
+      }
+      ctx.beginPath();
+      ctx.arc(vm.x, vm.y, (vm.radius || 6) + 5, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+});
 
 // Set background color for chart, not the entire canvas.
 Chart.pluginService.register({

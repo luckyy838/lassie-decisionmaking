@@ -233,6 +233,10 @@
                     justify-content: center;
                 }
 
+                .submit-user-feedback-button .MuiButton-root + .MuiButton-root {
+                    margin-left: 16px;
+                }
+
                 .hypothesisBlock {
                     text-align: left;
                     clear: both;
@@ -329,6 +333,10 @@
                 .submit-user-feedback-button {
                     display: flex;
                     justify-content: center;
+                }
+
+                .submit-user-feedback-button .MuiButton-root + .MuiButton-root {
+                    margin-left: 16px;
                 }
             }
 
@@ -549,6 +557,10 @@
     .submit-user-feedback-button {
         display: flex;
         justify-content: center;
+    }
+
+    .submit-user-feedback-button .MuiButton-root + .MuiButton-root {
+        margin-left: 16px;
     }
 
     .quit {

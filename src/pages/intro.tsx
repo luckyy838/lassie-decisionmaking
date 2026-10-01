@@ -11,9 +11,32 @@ import { useStateValue, Action } from '../state';
 import { resolutionTexts } from '../constants';
 import "../styles/intro.scss";
 import RadioButtonGroup from '../components/RadioButtonGroup';
-const robotDesertGif = require('../../assets/robot_desert_horizontal.gif');
-const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
 const competingLocalHypo = require('../../assets/CompetingLocalHypo.png');
+
+function SpiritVideo() {
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    React.useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = true;
+        const playPromise = video.play();
+        if (playPromise && playPromise.catch) {
+            playPromise.catch(() => {});
+        }
+    }, []);
+    return (
+        <video
+            ref={videoRef}
+            className="spiritVideo"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            src="/spirit.mp4"
+        />
+    );
+}
 
 export default function Intro(props) {
     const history = useHistory();
@@ -191,33 +214,24 @@ export default function Intro(props) {
         <div className="introCard">
             <div className="page1 contentWrapper">
                 <div className="contentContainer">
-                    <img src={robotDesertGif} className="robotGif"/>
                     <div className="text">
                         <p>
-                            The mobile hexapod robot RHex needs your help testing a hypothesis about the relationship 
-                            between sand strength and moisture at White Sands National Monument in New Mexico.
-                            RHex has already collected some strength and moisture data at a dune. Strength was measured 
-                            by mechanical resistance to shear (dragging) during robot leg-soil interactions and moisture 
-                            was measured using a probe attached to the robot.
+                            The following scenario takes place at White Sands National Park, New Mexico. Imagine you are part of a team of scientists using a robotic assistant, Spirit, for field data collection.
+                        </p>
+                        <p>
+                            Your team’s goal is to determine whether there is a relationship between the soil strength and moisture. Shear strength is measured via sensors embedded in Spirit’s legs. Moisture is measured using a probe attached to the robot.
+                        </p>
+                        <p>
+                            To conduct a measurement, Spirit stands on three legs and then pushes its fourth leg into the ground at a constant velocity, measuring the penetration depth and force exerted the entire time, as seen below. To ensure high quality data collection, Spirit will slow to a crawl to take three separate measurements at each measurement location.
                         </p>
                     </div>
-
-                    <img src={singleTransectNullHypothesis} className="nullHypothesisImg"/> 
-
-                    <div className="text">
-                        <p>
-                            Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see purple line).
-                            <br></br>
-                            <br></br>
-                            <b>The goal for you and RHex today is to select measurement locations on 
-                                the dune transect (from crest to interdune) to test the following hypothesis: </b>
-                            Soil strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), 
-                            at which point strength will be constant as moisture continues to increase (see blue line).
-                        </p>
+                    <SpiritVideo />
+                    <div className="buttonRow buttonRowInline">
+                        <Button onClick={onBackClick} color='primary' variant='contained'>Previous</Button>
+                        <Button disabled={nextDisable} onClick={onNextClick} color='primary' variant='contained' className="buttonRowButton">Next</Button>
                     </div>
                 </div>
             </div>
-            { buttonRow }
         </div>,
 
         // Panel 2 - Combined Objectives and New Question Page

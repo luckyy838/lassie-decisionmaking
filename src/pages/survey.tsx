@@ -6,7 +6,8 @@ import { useStateValue, Action } from '../state';
 import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupHorizontal from '../components/RadioButtonGroupHorizontal';
 import RankedScale from '../components/RankedScale';
-import { QuestionType, SurveyQuestion, surveyQuestions as rawSurveyQuestions, TextAreaType } from '../data/surveyQuestions';
+import { QuestionType, SurveyPage, SurveyQuestion, surveyPages, TextAreaType } from '../data/surveyQuestions';
+import { decisionConfidenceTexts } from '../constants';
 import '../styles/survey.scss';
 import { MultiStepDialog } from '../components/Dialogs';
 import ReactHtmlParser from 'react-html-parser'
@@ -14,33 +15,25 @@ import ReactHtmlParser from 'react-html-parser'
 const tileIndentation = 40;
 type SurveyAnswers = {[key: string] : string}
 
-const setSurveyQuestionIDs = (page: number, questionList: SurveyQuestion[], parentID = "") => {
-    const pagePrefix = parentID === "" ? (page + "-") : "";
-    questionList.forEach((question, i) => {
-        question.id = pagePrefix + (parentID ? (parentID + ".") : "") + i.toString();
-        if (question.followUps) {
-            question.followUps.forEach((followUp, i) => {
-                if (followUp) {
-                    setSurveyQuestionIDs(page, Array.isArray(followUp) ? followUp : [followUp], question.id + "." + i);
-                }
-            });
-        }
-    });
-}
-
 const generateSurveyOutput = (answers: SurveyAnswers, questionList: SurveyQuestion[][]) => {
     const questions = [];
     const extractQuestions = (question: SurveyQuestion, questions: any[], answers: SurveyAnswers) => {
-        if (question.type === QuestionType.Instruction || question.type === QuestionType.Image1 || question.type === QuestionType.Image2 || !answers[question.id || "-1"]) return;
-        questions.push({
+        const answer = answers[question.id || "-1"];
+        if (question.type === QuestionType.Instruction || question.type === QuestionType.Image1 || question.type === QuestionType.Image2 || !answer) return;
+        const entry: any = {
             id: question.id,
             text: question.text,
             type: QuestionType[question.type],
-            value: answers[question.id || "-1"]
-        });
+            value: answer
+        };
+        if (question.responses) {
+            const index = parseInt(answer, 10);
+            if (question.responses[index]) entry.label = question.responses[index];
+        }
+        questions.push(entry);
         if (question.followUps) {
             question.followUps.forEach((followUp, i) => {
-                if (followUp && i === parseInt(answers[question.id || "-1"])) {
+                if (followUp && i === parseInt(answer, 10)) {
                     (Array.isArray(followUp) ? followUp : [followUp]).forEach(followUpQuestion => {
                         extractQuestions(followUpQuestion, questions, answers);
                     });
@@ -71,9 +64,11 @@ const allQuestionsAnswered = (answers, questions: SurveyQuestion[]) : boolean =>
     return true;
 }
 
-// Hacky deep copy
-const surveyQuestions: SurveyQuestion[][] = JSON.parse(JSON.stringify(rawSurveyQuestions));
-surveyQuestions.forEach((page, i) => setSurveyQuestionIDs(i, page));
+const pagesForSession = (explanationEnabled: boolean | null): SurveyQuestion[][] => {
+    return surveyPages
+        .filter((surveyPage: SurveyPage) => !surveyPage.withExplanationOnly || explanationEnabled === true)
+        .map(surveyPage => surveyPage.questions);
+}
 
 const instructionComponent = (question: SurveyQuestion, depth: number) => {
     const id: string = question.id || "-1";
@@ -201,10 +196,23 @@ const dropDownMenuComponent2 = (question: SurveyQuestion, setAnswer, answers: Su
 const multipleChoiceComponent = (question: SurveyQuestion, setAnswer, answers: SurveyAnswers, depth: number, unanswered: boolean) => {
     if (!question.responses) return null;
     const id: string = question.id || "-1";
+    const dropdown = question.params && question.params.control === 'dropdown';
     return (
         <div className={`section ${unanswered && "highlighted"}`} style={{marginLeft: `${depth * tileIndentation}px`}} key={id}>
             <p>{ question.text }</p>
-            <RadioButtonGroup options={question.responses} selectedIndex={Number(answers[id] || "-1")} onChange={i => setAnswer(id, i.toString())}/>
+            {dropdown ?
+                <FormControl style={{minWidth: '70%', maxWidth: '100%'}}>
+                    <Select
+                        displayEmpty
+                        value={answers[id] || ""}
+                        onChange={event => setAnswer(id, String(event.target.value))}>
+                        <MenuItem value="" disabled>Select one</MenuItem>
+                        {question.responses.map((text, i) => (<MenuItem key={i} value={i.toString()}>{text}</MenuItem>))}
+                    </Select>
+                </FormControl>
+                :
+                <RadioButtonGroup options={question.responses} selectedIndex={Number(answers[id] || "-1")} onChange={i => setAnswer(id, i.toString())}/>
+            }
         </div>
     );
 }
@@ -339,6 +347,8 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 export default function Survey() {
     const [globalState, dispatch] = useStateValue();
     const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled, explanationChoice } = globalState;
+    const hypothesisConfidence = globalState.hypothesisConfidence == null ? -1 : globalState.hypothesisConfidence;
+    const pages = pagesForSession(explanationEnabled);
     const [page, setPage] = useState(0);
     const [answers, setAnswers] = useState({} as SurveyAnswers);
     const setAnswer = (id: string, answer: string) => {
@@ -346,8 +356,8 @@ export default function Survey() {
         newAnswer[id] = answer;
         setAnswers({...answers, ...newAnswer});
     };
-    const firstUnansweredId = idOfFirstUnansweredQuestion(surveyQuestions[page], answers);
-    let questionComponents = buildQuestionComponents(surveyQuestions[page], answers, setAnswer, firstUnansweredId);
+    const firstUnansweredId = idOfFirstUnansweredQuestion(pages[page], answers);
+    let questionComponents = buildQuestionComponents(pages[page], answers, setAnswer, firstUnansweredId);
 
     const saveLogs = surveyOutput => {
         const log = {
@@ -355,6 +365,10 @@ export default function Survey() {
             explanationEnabled: explanationEnabled,
             explanationChoice: explanationChoice,
             conclusionFreeResponse: conclusionFreeResponse,
+            hypothesisConfidence: hypothesisConfidence >= 0 ? decisionConfidenceTexts[hypothesisConfidence] : null,
+            importantPoints: globalState.importantPoints || [],
+            ignoredPoints: globalState.ignoredPoints || [],
+            importantWeighedEqually: !!globalState.importantWeighedEqually,
             userSteps: userSteps,
             surveyResponses: surveyOutput
         };
@@ -364,9 +378,9 @@ export default function Survey() {
     }
 
     const onContinueClick = () => {
-        if (page < surveyQuestions.length - 1) {
-            if (page + 1 === surveyQuestions.length - 1) {
-                const output = generateSurveyOutput(answers, surveyQuestions);
+        if (page < pages.length - 1) {
+            if (page + 1 === pages.length - 1) {
+                const output = generateSurveyOutput(answers, pages);
                 // Outputs the user's responses to the database
                 saveLogs(output);
                 // Set the "submitted" state property to true so that if the user revisits the website,
@@ -386,18 +400,18 @@ export default function Survey() {
         <div className="surveyContainer">
             { questionComponents }
             {/* Apply new change by Zeyu 6/8/2022 */}
-            {(page === surveyQuestions.length - 2) &&
+            {(page === pages.length - 2) &&
                 <div className="buttonRow">
                     <Button disabled={page === 0} className="backButton" color="primary" variant="contained" onClick={onBackClick}>Back</Button>
-                    <Button disabled={!allQuestionsAnswered(answers, surveyQuestions[page])} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Finish</Button>
+                    <Button disabled={!allQuestionsAnswered(answers, pages[page])} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Finish</Button>
                 </div>
             }
-            {!(page >= surveyQuestions.length - 2) &&
+            {!(page >= pages.length - 2) &&
                 <div className="buttonRow">
                     <Button disabled={page === 0} className="backButton" color="primary" variant="contained" onClick={onBackClick}>Back</Button>
-                    <Button disabled={false} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Continue</Button>
+                    <Button disabled={!allQuestionsAnswered(answers, pages[page])} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Continue</Button>
                 </div>
             }
         </div>
-    ); //TODO: redisable the continue button above, same as line 396
+    );
 }

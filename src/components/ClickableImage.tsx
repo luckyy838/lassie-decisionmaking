@@ -42,8 +42,8 @@ const useStyles = makeStyles({
   },
 });
 
-const RHEX_BASE_W = 60;
-const RHEX_BASE_H = 48;
+const RHEX_BASE_W = 92;
+const RHEX_BASE_H = 44;
 
 function getRhexPlacement(
   sampleIndex: number,
@@ -345,6 +345,18 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
             locationIndex={suggestion.index}
             robot={true}
             selected={!!userSample && userSample.index === suggestion.index}
+            onSelect={enabled ? () => {
+              const index = suggestion.index;
+              const snapX = sampleLocations[index][0];
+              const snapY = sampleLocations[index][1];
+              selectLocation(
+                index,
+                snapX * height / NORMALIZED_HEIGHT,
+                snapY * height / NORMALIZED_HEIGHT,
+                snapX,
+                snapY
+              );
+            } : null}
           />
           );
         })

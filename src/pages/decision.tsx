@@ -404,7 +404,7 @@ export default function Main() {
     <div className="objective-rankings">
      <div className="resolutionMethodTitle"><strong>Prioritize Objectives</strong></div>
 
-      <p>Please rank the following objectives based on the initial data collected so far. 1 is the objective you agree with the most. </p>
+      <p>Please rank the following objectives based on initial data collected so far. Spirit will use this ranking to inform its suggestions. 1 is the objective you agree with the most.</p>
       {objectivesToRank}
     </div>
 
@@ -443,35 +443,38 @@ const onObjectiveTextChange = e => {
 
 // Apply new changes by Zeyu 6/21/2022
   useEffect(() => {
-    const prefix:string = "The suggested location did not address my selected belief #";
-
-    const rejectReasonOptionsTemp = objectives.map((obj, i) => prefix + (i+1) + ": " + obj.objective);
-
-    const lastOption = "I rejected the suggested location for a different reason.";
-    rejectReasonOptionsTemp.push(lastOption);
-
-    dispatch({ type: Action.SET_REJECT_REASON_OPTIONS, value: rejectReasonOptionsTemp });
-
-  }, [objectives]);
+    dispatch({
+      type: Action.SET_REJECT_REASON_OPTIONS,
+      value: [
+        "I did not consider Spirit's suggestions when choosing a location.",
+        "I considered Spirit's suggestions, but thought another location would better improve information coverage.",
+        "I considered Spirit's suggestions, but thought another location would better enable testing of the hypothesis.",
+        "Spirit's suggestions influenced where I chose to go, even though I did not select one of the suggested locations.",
+        "I rejected the suggested locations for a different reason.",
+      ],
+    });
+  }, []);
 
   // Apply new changes by Zeyu 6/19/2022
   const rejectReasonQuestions = 
     <div className="reject-reason-questions">
-      <p><strong>Why did you reject RHex's suggested locations?</strong></p>
+      <p><strong>Why did you reject Spirit's suggested locations?</strong></p>
       <RadioButtonGroupMultipleSelectionOptions options={rejectReasonOptions}
       selectedIndexs = {rejectReasons}
       onChange={i => {
+        const label = rejectReasonOptions[i];
         let selectIndexTemp:number[] = [...rejectReasons];
-        
-        if (!selectIndexTemp.includes(i)) selectIndexTemp.push(i);
-        
         let rejectReasonsOptionsTemp:string[] = [...rejectReasonsOptions];
-
-        if (!rejectReasonsOptionsTemp.includes(rejectReasonOptions[i])) rejectReasonsOptionsTemp.push(rejectReasonOptions[i]);
-    
+        if (selectIndexTemp.includes(i)) {
+          selectIndexTemp = selectIndexTemp.filter(n => n !== i);
+          rejectReasonsOptionsTemp = rejectReasonsOptionsTemp.filter(text => text !== label);
+        } else {
+          selectIndexTemp.push(i);
+          if (!rejectReasonsOptionsTemp.includes(label)) rejectReasonsOptionsTemp.push(label);
+        }
         dispatch({ type: Action.SET_REJECT_REASONS_OPTIONS, value: rejectReasonsOptionsTemp })
         dispatch({ type: Action.SET_REJECT_REASONS, value: selectIndexTemp })
-        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: selectIndexTemp.length === 0 });
       }
     }/>
     </div>
@@ -488,22 +491,16 @@ const onObjectiveTextChange = e => {
 
   const userLocationSelectionQuestion = 
     <div className="user-location_selection-question">
-      <p><strong>RHex's suggestions are marked with letters (A, B, C) on the dune map. Your planned location is the orange star. Click the location where you want RHex to take the next sample. Then click Submit.</strong></p>
-      {robotSuggestions && robotSuggestions.length > 0 &&
-        <ul style={{ marginTop: 0 }}>
-          {robotSuggestions.map((suggestion, index) => (
-            <li key={suggestion.index}>
-              {String.fromCharCode(index + 65)}: {suggestion.methodLabel || 'RHex suggestion'}
-            </li>
-          ))}
-        </ul>
-      }
-      {suggestionOverlapNote ? <p><em>{suggestionOverlapNote}</em></p> : null}
+      <p><strong>Spirit's suggestions now appear on the dune cross-section along with your planned location.</strong></p>
+      <p><strong>You may choose your original planned location or one of the suggested locations by clicking on the corresponding {robotSuggestions && robotSuggestions.length
+        ? robotSuggestions.map((_, index) => String.fromCharCode(65 + index)).join(', ')
+        : 'A, B, C'} on the dune cross-section.</strong></p>
+      <p><strong>Alternatively, you may choose a different location by clicking anywhere along the dune cross-section.</strong></p>
     </div>
 
   const desiredWaypointQuestion =
     <div className="desired-waypoint-question">
-      <p><strong>Click the dune map to mark where you want to sample next. This is your plan. An orange star will appear on that point. After you click Submit, you will see RHex's suggestions (A, B, C) and can compare them with your star.</strong></p>
+      <p><strong>Select a location where you would prefer to collect data next by clicking on the dune cross-section. An orange star will mark the location you select before you see Spirit's suggestions.</strong></p>
     </div>
 
   const explanationChoiceQuestion =
@@ -519,7 +516,7 @@ const onObjectiveTextChange = e => {
 
   const decisionConfidenceQuestion = layoutMode === 'new' ? (
     <div className="decision-confidence-question decision-confidence-slider">
-      <p><strong><i>How confident are you in your decision to collect data at the location you just chose?</i></strong></p>
+      <p><strong><i>How confident are you in your decision to collect data at the location you selected?</i></strong></p>
       <div className="slider-box">
         <Box px={4}>
           <Slider
@@ -540,7 +537,7 @@ const onObjectiveTextChange = e => {
     </div>
   ) : (
     <div className="decision-confidence-question">
-      <p><strong>How confident are you in your decision to collect data at the location you just chose?</strong></p>
+      <p><strong>How confident are you in your decision to collect data at the location you selected?</strong></p>
       <RadioButtonGroup options={decisionConfidenceTexts} selectedIndex={decisionConfidence} onChange={i => {
         dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: i });
         dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
@@ -560,7 +557,7 @@ const onObjectiveTextChange = e => {
       allowCancel={false}
       steps={[
         [
-          "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see blue line). RHex is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
+          "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see blue line). Spirit is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
         ]
       ]}
       img={singleTransectNullHypothesis}
@@ -608,7 +605,7 @@ const resMethod =
      <div className="resolutionMethodtext">
         {/* //const prevMethod = resolutionTexts */}
         <div className="resolutionMethodTitle"><strong>Choose Method for Resolving Objectives</strong></div>
-        <p>There are three possible ways to balance the objectives. Please only choose one:</p>
+        <p>Please choose your preferred method of balancing the objectives. Spirit will use this preference to inform its suggestions.</p>
      </div>
     <RadioButtonGroup options={resolutionTexts} selectedIndex={resolutionMethod} onChange={i => {
         dispatch({ type: Action.SET_RES_METHOD, value: i });
@@ -619,26 +616,27 @@ const resMethod =
     
     const tutorial2 = 
     <div className = 'tutorial2'>
-      <p>A dune cross-section is displayed in the top right corner. The cross-section is used to show locations where data has already been collected and new suggested locations from RHex. Click anywhere along the slope surface to choose a location. Suggested locations will always be labeled with letters (A, B, C). Current location can be determined by the presence of the RHex figure.</p>
+      <p>A cross-section of the dune is displayed here that will be used for selecting measurement locations. Spirit’s suggestions will be labeled with letters (e.g., A, B, C).</p>
+      <p>Once data has been collected at a location, the location will be marked with a color corresponding to the data in the data panel.</p>
     </div>
 
 const tutorial3 = 
 <div className = 'tutorial3'>
-  <p>Just below the dune cross-section is a graphical explanation of the suggested locations from RHex. Uncertainty is on the Y-axis and location along the dune transect is on the X-axis. Suggested locations are meant to resolve areas of high uncertainty based on two objectives: information coverage (purple) and hypothesis evaluation (green).
-  </p>
+  <p>A reward function corresponding to Spirit’s suggested locations along the dune is displayed under the dune cross-section. Reward is displayed on the y-axis, location along the dune transect is displayed on the x-axis.</p>
+  <p>Spirit’s suggestions represent locations it deems highly rewarding based on the balancing of two objectives: information coverage (displayed in purple) and hypothesis evaluation (displayed in green).</p>
 </div>
 
 const tutorial1 = 
 <div className = 'tutorial1'>
-  <p>Data collected by RHex at the previously visited locations is plotted in the top left corner. Shear strength is on the Y-axis and moisture percentage is on the X-axis. RHex will always take 3 measurements at each location visited. Note that the color of the plotted data points corresponds to the color of the locations displayed on the dune cross-section.
-  </p>
+  <p>Spirit will take 3 measurements at each location, and collected data will be visualized here. Initial measurements are currently displayed.</p>
+  <p>Soil penetration strength is plotted on the y-axis. Soil moisture (%) is plotted on the x-axis.</p>
 </div>
 
 const tutorial4 = 
 <div className = 'tutorial4'>
   <p>You will evaluate the collected data against the <span style={{color: 'blue', textDecorationLine: 'underline', cursor: 'pointer'}}><strong><a onClick={() => setHypothesisOpen(true)}>hypothesis</a></strong></span>. 
   </p>
-  <p>You may choose up to {MAX_USER_SAMPLES} sampling locations. You do not have to choose {MAX_USER_SAMPLES}. This maximum is due to the constraints of how many samples can be taken in one day.
+  <p>You may choose up to {MAX_USER_SAMPLES} sampling locations. You do not have to choose {MAX_USER_SAMPLES}. This maximum is constrained by Spirit battery life.
   </p>
   <p>Once you feel you have collected enough data to evaluate the hypothesis, select the “End Collection at Transect” button. This button will appear after you have collected your first sample.
   </p>
@@ -696,6 +694,37 @@ const tutorial4 =
     dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.DECISION_CONFIDENCE });
   };
 
+  const onPrevious = () => {
+    if (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT && countUserChosenSamples(samples) > 0) {
+      return;
+    }
+    const expParam = getExpQueryParam();
+    const previousState = {
+      [UserFeedbackState.TUTORIAL2]: UserFeedbackState.TUTORIAL1,
+      [UserFeedbackState.TUTORIAL3]: UserFeedbackState.TUTORIAL2,
+      [UserFeedbackState.TUTORIAL4]: UserFeedbackState.TUTORIAL3,
+      [UserFeedbackState.EXPLANATION_CHOICE]: UserFeedbackState.TUTORIAL4,
+      [UserFeedbackState.RANK_OBJECTIVES]: (expParam === 'on' || expParam === 'off')
+        ? UserFeedbackState.TUTORIAL4
+        : UserFeedbackState.EXPLANATION_CHOICE,
+      [UserFeedbackState.RES_METHOD]: UserFeedbackState.RANK_OBJECTIVES,
+      [UserFeedbackState.DESIRED_WAYPOINT]: UserFeedbackState.RES_METHOD,
+    }[userFeedbackState];
+    if (previousState == null) {
+      return;
+    }
+    if (previousState === UserFeedbackState.RES_METHOD) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
+    }
+    dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: previousState });
+  };
+
+  const inTutorial =
+    userFeedbackState === UserFeedbackState.TUTORIAL1 ||
+    userFeedbackState === UserFeedbackState.TUTORIAL2 ||
+    userFeedbackState === UserFeedbackState.TUTORIAL3 ||
+    userFeedbackState === UserFeedbackState.TUTORIAL4;
+
   const onSubmit = async () => {
     dispatch({ type: Action.SET_NUM_SUBMIT_CLICKS, value: numSubmitClicks + 1 });
     switch (userFeedbackState) {
@@ -724,6 +753,11 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.EXPLANATION_CHOICE: {
+        const nextChoice = explanationChoiceIndex === 0 ? 'with' : explanationChoiceIndex === 1 ? 'without' : 'random';
+        if (globalState.explanationChoice === nextChoice) {
+          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
+          return;
+        }
         let enabled = false;
         let choice: 'with' | 'without' | 'random' = 'without';
         if (explanationChoiceIndex === 0) {
@@ -838,6 +872,14 @@ const tutorial4 =
       fontSize: '12px'
   }
   const userChosenSampleCount = countUserChosenSamples(samples);
+  const showPrevious = inTutorial
+    ? userFeedbackState !== UserFeedbackState.TUTORIAL1
+    : (
+      userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE ||
+      userFeedbackState === UserFeedbackState.RANK_OBJECTIVES ||
+      userFeedbackState === UserFeedbackState.RES_METHOD ||
+      (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT && userChosenSampleCount === 0)
+    );
   const clickIsForMap = userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION || userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT;
   const showExplanationChart =
     explanationEnabled !== false ||
@@ -911,8 +953,11 @@ const tutorial4 =
         {userFeedbackStateMap[userFeedbackState]}
         </div>
         <div className="submit-user-feedback-button">
-          <Button disabled={disableSubmitButton} variant="contained" color="secondary" onClick={onSubmit}>
-            Submit
+          {showPrevious && (
+            <Button variant="contained" color="primary" onClick={onPrevious}>Previous</Button>
+          )}
+          <Button disabled={!inTutorial && disableSubmitButton} variant="contained" color="primary" onClick={onSubmit}>
+            Next
           </Button>
         </div>
         <br></br>
@@ -1499,7 +1544,7 @@ const tutorial4 =
 //       allowCancel={false}
 //       steps={[
 //         [
-//           "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see blue line). RHex is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
+//           "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see blue line). Spirit is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
 //         ]
 //       ]}
 //       img={singleTransectNullHypothesis}

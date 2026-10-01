@@ -334,7 +334,7 @@ function buildOverlapNote(indexToMethods: { [index: number]: number[] }): string
   Object.keys(indexToMethods).forEach(idx => {
     const methods = indexToMethods[Number(idx)];
     if (methods.length > 1) {
-      parts.push("RHex's suggestions for " + joinMethodNames(methods) + " are the same location.");
+      parts.push("Spirit's suggestions for " + joinMethodNames(methods) + " are the same location.");
     }
   });
   return parts.join(' ');

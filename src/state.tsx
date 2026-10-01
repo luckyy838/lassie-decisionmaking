@@ -19,6 +19,14 @@ export const ChartDisplayMode = {
   AVERAGE: 1
 }
 
+export type ConclusionPoint = {
+  rowIndex: number,
+  measurementIndex: number,
+  waypointIndex: number,
+  moisture: number,
+  strength: number,
+};
+
 export type Chart = any;
 
 // The charts ending with "Map" are those used on the geo.tsx page.
@@ -44,6 +52,10 @@ export interface IState {
   currUserStep: CurrUserStepData,
   userSteps: UserStepsData[], // will be in final output after survey is completed
   conclusionFreeResponse: string,
+  hypothesisConfidence: number,
+  importantPoints: ConclusionPoint[],
+  ignoredPoints: ConclusionPoint[],
+  importantWeighedEqually: boolean,
    //LUCKY resolution method
   initialResolutionMethod: number,
   // Chart fields
@@ -115,6 +127,10 @@ export const initialState : IState = {
   },
   userSteps: [],
   conclusionFreeResponse: "", //Add by Zeyu 6/13/2022
+  hypothesisConfidence: -1,
+  importantPoints: [],
+  ignoredPoints: [],
+  importantWeighedEqually: false,
   initialResolutionMethod: 0,
   chart: null,
   chartSettings: {
@@ -183,6 +199,10 @@ export enum Action {
     SET_NUM_SUBMIT_CLICKS,
     /** FINISH */
     SET_CONCLUSION_FREE_RESPONSE,
+    SET_HYPOTHESIS_CONFIDENCE,
+    SET_IMPORTANT_POINTS,
+    SET_IGNORED_POINTS,
+    SET_IMPORTANT_WEIGHED_EQUALLY,
     SET_INITIAL_RESOLUTION_METHOD,
     SET_SELECTED_POINT_FROM_CHART,
     SET_CHART,
@@ -219,6 +239,10 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_SAMPLES]: 'samples',
   [Action.SET_CURR_USER_STEP]: 'currUserStep',
   [Action.SET_CONCLUSION_FREE_RESPONSE]: 'conclusionFreeResponse',
+  [Action.SET_HYPOTHESIS_CONFIDENCE]: 'hypothesisConfidence',
+  [Action.SET_IMPORTANT_POINTS]: 'importantPoints',
+  [Action.SET_IGNORED_POINTS]: 'ignoredPoints',
+  [Action.SET_IMPORTANT_WEIGHED_EQUALLY]: 'importantWeighedEqually',
   [Action.SET_INITIAL_RESOLUTION_METHOD]:'initialResolutionMethod',
   [Action.SET_CHART]: 'chart',
   [Action.SET_CHART_SETTINGS]: 'chartSettings',

@@ -39,13 +39,13 @@ export const updateCharts = (globalState: IState, dispatch: any) => {
     const averageMoistureValue = mean(moisture);
 
     if (chartSettings.mode === ChartDisplayMode.RAW) {
-      shear.forEach(value => pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index));
-      moisture.forEach(value => pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index));
-      shearMoisture.forEach(value => pushChartArrayValue(shearMoistureDataPoints, value.moisture, value.shear, rowIndex, currSampleIdx, index));
+      shear.forEach((value, measurementIndex) => pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index, measurementIndex));
+      moisture.forEach((value, measurementIndex) => pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), value, rowIndex, currSampleIdx, index, measurementIndex));
+      shearMoisture.forEach((value, measurementIndex) => pushChartArrayValue(shearMoistureDataPoints, value.moisture, value.shear, rowIndex, currSampleIdx, index, measurementIndex));
     } else if (chartSettings.mode === ChartDisplayMode.AVERAGE) {
-      pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), averageShearValue, rowIndex, currSampleIdx,index);
-      pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), averageMoistureValue, rowIndex, currSampleIdx, index);
-      pushChartArrayValue(shearMoistureDataPoints, averageMoistureValue, averageShearValue, rowIndex, currSampleIdx, index);
+      pushChartArrayValue(shearDataPoints, Math.min(xVal, 1), averageShearValue, rowIndex, currSampleIdx, index, -1);
+      pushChartArrayValue(moistureDataPoints, Math.min(xVal, 1), averageMoistureValue, rowIndex, currSampleIdx, index, -1);
+      pushChartArrayValue(shearMoistureDataPoints, averageMoistureValue, averageShearValue, rowIndex, currSampleIdx, index, -1);
     }
   }
   
@@ -160,7 +160,7 @@ export const clearCharts = (chart) => {
   });
 }
 
-const pushChartArrayValue = (array: any[], x, y, rowIndex, curRowIdx, index) => {
+const pushChartArrayValue = (array: any[], x, y, rowIndex, curRowIdx, index, measurementIndex) => {
   if ((!x && isNaN(x)) || (!y && isNaN(y))) {
     console.log(`ChartHandler: not adding point (${x}, ${y})`);
     return;
@@ -171,7 +171,8 @@ const pushChartArrayValue = (array: any[], x, y, rowIndex, curRowIdx, index) => 
     rowIndex,
     curRowIdx,
     hover: false,
-    index
+    index,
+    measurementIndex
   });
 }
 

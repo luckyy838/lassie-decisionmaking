@@ -1,6 +1,3 @@
-import { confidenceTexts, robotAgreeDisagreeOptions, robotTrustOptions } from '../constants';
-
-
 export enum QuestionType {
     MultipleChoice, MultipleChoiceHorizontal, Ranked, Instruction, Text, Image1, Image2, ContinuousExplanation,
     dropDownMenuComponent1, dropDownMenuComponent2
@@ -14,244 +11,176 @@ export type SurveyQuestion = {
     followUps?: (null | SurveyQuestion | SurveyQuestion[])[],
     id?: string,
     params?: {
-        textAreaType?: TextAreaType
+        textAreaType?: TextAreaType,
+        control?: 'dropdown'
     },
 };
 
-let multipleBeliefsFollowUp =  {
-    type: QuestionType.MultipleChoice,
-    text: "When you held multiple beliefs, how did you resolve them?",
-    responses: [
-        "I focused on one-at-a-time. I selected a sampling location that addressed my most important belief.", 
-        "I weighted my beliefs. I prioritized sampling locations that addressed my most important belief first, and then selected from these a location that also addressed my second most important belief.",
-        "I did not weight my beliefs. I selected a sampling location that addressed my multiple beliefs, even if it was not the ideal location to address my most important belief.",
-        "Other"
-    ],
-    followUps: [
-        null,
-        null,
-        null,
-        {
-            type: QuestionType.Text,
-            text: "Please explain."
-        },
-    ]
-}
+export type SurveyPage = {
+    withExplanationOnly?: boolean,
+    questions: SurveyQuestion[]
+};
 
-//Add new follow-ups for bachelors degree question if the user selected 'Yes'
-let multipleBachelorFollowUp = [
-    [
-        {
-            type: QuestionType.Text,
-            text: "How many years of practice do you have, post bachelor's degree?",
-            params: { textAreaType: TextAreaType.Number }
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "Are you in academia or industry",
-            responses: ["Academia", "Industry"],
-            followUps: [
-                {
-                    type: QuestionType.MultipleChoice,
-                    text: "Which best describes your current position?",
-                    responses: ["Graduate Student", "Postdoctoral", "Adjunct", "Assistant Professor", "Associate Professor", "Full Professor", "Emeritus"]
-                },
-                null
-            ]
-        },
-        {
-            type: QuestionType.Text,
-            text: "What is your discipline?"
-        },
-        {
-            type: QuestionType.Text,
-            text: "How would you describe your specialization?",
-        }
-    ],
-    null
-]
+const specializationOptions = [
+    "Continental Scientific Drilling",
+    "Energy Geology",
+    "Environmental and Engineering Geology",
+    "Geoarchaeology",
+    "Geobiology and Geomicrobiology",
+    "Geochronology",
+    "Geoinformatics and Data Science",
+    "Geology and Health",
+    "Geology and Society",
+    "Geophysics and Geodynamics",
+    "Geoscience Education",
+    "History and Philosophy of Geology",
+    "Hydrogeology",
+    "Karst",
+    "Limnogeology",
+    "Marine and Coastal Geoscience",
+    "Mineralogy, Geochemistry, Petrology, and Volcanology",
+    "Planetary Geology",
+    "Quaternary Geology and Geomorphology",
+    "Sedimentary Geology",
+    "Soils and Soil Processes",
+    "Structural Geology and Tectonics",
+    "Other"
+];
 
-export const surveyQuestions: SurveyQuestion[][] = [
-    // Apply new change by Zeyu 6/13/2022
-    [
-        {
-            type: QuestionType.Instruction,
-            text: "Thank you! You are almost finished. Please respond to a few final questions."
-        },
-        {
-            type: QuestionType.Instruction,
-            text: "Imagine a trusted student or colleague also collected data at White Sands using RHex. They found the following relationship between sand moisture and shear strength:",
-        },
-        {
-            type: QuestionType.Image1,
-            // text: "Image A"
-        },
-        {
-            type: QuestionType.dropDownMenuComponent1,
-            // text: "Provide a ranking of your certainty that the hypothesis is supported or refuted by this data. If you have no preference, select “I am unsure”:",
-            responses: confidenceTexts
-        },
-        {
-            type: QuestionType.Instruction,
-            text: "Imagine a different student or colleague, using the same methods, found the following relationship between sand moisture and shear strength:",
-        },
-        {
-            type: QuestionType.Image2,
-            // text: "Image B"
-        },
-        {
-            type: QuestionType.dropDownMenuComponent2,
-            // text: "Provide a ranking of your certainty that the hypothesis is supported or refuted by this data. If you have no preference, select “I am unsure”:",
-            responses: confidenceTexts
-        }
-    ],
-    [
-        // {
-        //     type: QuestionType.MultipleChoice,
-        //     text: "How often did you hold multiple beliefs at a time (e.g., believing simultaneously that there are areas along the dune transect where data is needed, AND that there are potential discrepancies between measurements and the given hypothesis that needs to be further investigated)?",
-        //     responses: ["Always", "Most of the time", "Sometimes", "Rarely", "Never"],
-        //     followUps: [
-        //         multipleBeliefsFollowUp,
-        //         multipleBeliefsFollowUp,
-        //         multipleBeliefsFollowUp,
-        //         multipleBeliefsFollowUp,
-        //         null
-        //     ]
-        // },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "How often did you utilize the provided explanations to determine if to accept/reject the robot’s sampling suggestions?",
-            responses: ["Always", "Most of the time", "Sometimes", "Rarely", "Never"]
+const workSettingOptions = [
+    "I primarily work in academia",
+    "I primarily work in industry",
+    "I primarily work in state surveys/USGS",
+    "I primarily work for a governmental entity",
+    "I work about the same amount in academia and industry",
+    "Other"
+];
 
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "How easy was it to use the information in the explanation to determine to accept/reject the robot’s sampling suggestions?",
-            responses: ["Very easy", "Easy", "Somewhat easy", "Difficult", "Very difficult"]
-
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "How confident were you in using the explanation to determine if to accept/reject the robot’s sampling location?",
-            responses: ["Very confident", "Confident", "Somewhat confident", "Not confident", "Very not confident"]
-
-        },
-        {
-            type: QuestionType.Instruction,
-            text: "Another way we could have presented the explanations is shown below. Would you have preferred seeing the explanations in this format?",
-        },
-        {
-            type: QuestionType.ContinuousExplanation,
-            // text: "Image B"
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            // text: "Provide a ranking of your certainty that the hypothesis is supported or refuted by this data. If you have no preference, select “I am unsure”:",
-            responses: ["Highly preferred", "Preferred", "Somewhat preferred", "Not preferred", 
-                "Strongly not preferred"]
-        },
-        
-        {
-            type: QuestionType.Text,
-            text: "Describe why you prefer this explanation format."
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "If the robot collected data autonomously using its own suggestions without providing explanations, how satisfied would you be with the resulting data collection strategy?",
-            responses: ["Very satisfied", "Satisfied", "Somewhat satisfied", 
-            "Somewhat unsatisfied", "Unsatisfied", "Very unsatisfied"]
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "What do you think your confidence in the system to autonomously collect data would be if no explanations were provided?",
-            responses: ["Very confident", "Confident", "Somewhat confident", 
-            "Somewhat not confident", "Not confident", "Very not confident"]
-        },
-    ],
-    // [
-    //     {
-    //         type: QuestionType.Instruction,
-    //         text: "Rank the extent to which you agree/disagree with the following statement:"
-    //     },
-    //     // {
-    //     //     type: QuestionType.MultipleChoiceHorizontal,
-    //     //     text: "The robot's suggestions were useful <u>when my reported belief was to increase spatial coverage</u>.",
-    //     //     responses: robotAgreeDisagreeOptions
-    //     // },
-    //     // {
-    //     //     type: QuestionType.MultipleChoiceHorizontal,
-    //     //     text: "The robot's  suggestions were useful <u>when my reported belief was to increase moisture-range coverage</u>.",
-    //     //     responses: robotAgreeDisagreeOptions
-    //     // },
-    //     // {
-    //     //     type: QuestionType.MultipleChoiceHorizontal,
-    //     //     text: "The robot's suggestions were useful <u>when my reported belief was that there was a discrepancy between the data and hypothesis that needed further evaluation</u>.",
-    //     //     responses: robotAgreeDisagreeOptions
-    //     // },
-    //     // {
-    //     //     type: QuestionType.MultipleChoiceHorizontal,
-    //     //     text: "The robot's suggestions were useful <u>when my reported belief was the the data was supporting the hypothesis but additional evaluation was needed</u>.",
-    //     //     responses: robotAgreeDisagreeOptions
-    //     // },
-    //     {
-    //         type: QuestionType.MultipleChoiceHorizontal,
-    //         text: "The robot's suggestions were <b>NOT</b> useful.",
-    //         responses: robotAgreeDisagreeOptions
-    //     },
-    //     {
-    //         type: QuestionType.Text,
-    //         text: "If you were to use this robot for data collection in real life, what changes or improvements would you make to the explanations to make it more likely to use the explanations in the field?",
-    //     }
-    // ],
-    [
-        {
-            type: QuestionType.Instruction,
-            text: "Please respond to a few final demographic questions."
-        },
-        {
-            type: QuestionType.Text,
-            text: "What is your age?",
-            params: { textAreaType: TextAreaType.Number }
-        },
-        {
-            //Apply new changes by Zeyu 6/7/2022
-            type: QuestionType.MultipleChoice,
-            text: "What is your gender?",
-            responses: [ "Woman", "Man", "Gender Variant / Non-conforming", "Prefer to self describe", "Prefer not to say" ],
-            followUps: [
-                null,
-                null,
-                null,
-                {
-                    type: QuestionType.Text,
-                    text: "Please describe your gender."
-                },
-                null
-            ]
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "Have you completed a bachelor's degree?",
-            responses: [ "Yes", "No" ],
-            followUps: multipleBachelorFollowUp // Apply new changes by Zeyu 6/7/2022
-        },
-        {
-            type: QuestionType.MultipleChoice,
-            text: "Are you familiar with any of the features of this decision making scenario? Have you ever collected data at White Sands National Monument before or investigated a similar research question?",
-            responses: ["Yes", "No"],
-            followUps: [
-                {
-                    type: QuestionType.Text,
-                    text: "Please explain which features of the scenario you are familiar with."
-                },
-                null
-            ]
-        }
-    ],
-    [
-        {
-            type: QuestionType.Instruction,
-            text: "Thank you for your responses! You have completed this survey."
-        }
-    ]
+export const surveyPages: SurveyPage[] = [
+    {
+        withExplanationOnly: true,
+        questions: [
+            {
+                id: "explanationUseFrequency",
+                type: QuestionType.MultipleChoice,
+                text: "How often did you utilize the provided explanations to determine if to accept/reject the robot’s sampling suggestions?",
+                responses: ["Always", "Most of the time", "Sometimes", "Rarely", "Never"]
+            },
+            {
+                id: "explanationEase",
+                type: QuestionType.MultipleChoice,
+                text: "How easy was it to use the information in the explanation to determine to accept/reject the robot’s sampling suggestions?",
+                responses: ["Very easy", "Easy", "Somewhat easy", "Difficult", "Very difficult"]
+            }
+        ]
+    },
+    {
+        questions: [
+            {
+                id: "demographicIntro",
+                type: QuestionType.Instruction,
+                text: "Please respond to a few final demographic questions."
+            },
+            {
+                id: "age",
+                type: QuestionType.Text,
+                text: "What is your age?",
+                params: { textAreaType: TextAreaType.Number }
+            },
+            {
+                id: "gender",
+                type: QuestionType.MultipleChoice,
+                text: "What is your gender?",
+                responses: ["Woman", "Man", "Gender Variant / Non-conforming", "Prefer to self describe", "Prefer not to say"],
+                followUps: [
+                    null,
+                    null,
+                    null,
+                    {
+                        id: "genderSelfDescribe",
+                        type: QuestionType.Text,
+                        text: "Please describe your gender."
+                    },
+                    null
+                ]
+            },
+            {
+                id: "specialization",
+                type: QuestionType.MultipleChoice,
+                text: "How would you describe your specialization?",
+                responses: specializationOptions,
+                params: { control: 'dropdown' },
+                followUps: specializationOptions.map((option, i) => (
+                    i === specializationOptions.length - 1
+                        ? {
+                            id: "specializationOther",
+                            type: QuestionType.Text,
+                            text: "You selected \"Other\" for the previous question, please provide your specialization here:",
+                            params: { textAreaType: TextAreaType.Small }
+                        }
+                        : null
+                ))
+            },
+            {
+                id: "yearsInSpecialization",
+                type: QuestionType.Text,
+                text: "How many years of experience do you have in your specialization?",
+                params: { textAreaType: TextAreaType.Number }
+            },
+            {
+                id: "workSetting",
+                type: QuestionType.MultipleChoice,
+                text: "Do you primarily work in industry or academia?",
+                responses: workSettingOptions,
+                followUps: [
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    {
+                        id: "workSettingOther",
+                        type: QuestionType.Text,
+                        text: "You selected \"Other\" for the previous question, please provide your professional environment here:",
+                        params: { textAreaType: TextAreaType.Small }
+                    }
+                ]
+            },
+            {
+                id: "highestDegree",
+                type: QuestionType.MultipleChoice,
+                text: "What is the highest degree/academic appointment you have obtained?",
+                responses: ["currently undergraduate", "bachelors", "masters", "PhD", "postdoc", "professor"]
+            },
+            {
+                id: "yearsSinceBachelors",
+                type: QuestionType.Text,
+                text: "How many years has it been since you earned your bachelor's degree?",
+                params: { textAreaType: TextAreaType.Number }
+            },
+            {
+                id: "scenarioFamiliarity",
+                type: QuestionType.MultipleChoice,
+                text: "Are you familiar with any of the features of this decision making scenario? Have you ever collected data at White Sands National Monument before or investigated a similar research question?",
+                responses: ["Yes", "No"],
+                followUps: [
+                    {
+                        id: "scenarioFamiliarityDetail",
+                        type: QuestionType.Text,
+                        text: "Please explain which features of the scenario you are familiar with."
+                    },
+                    null
+                ]
+            }
+        ]
+    },
+    {
+        questions: [
+            {
+                id: "thankYou",
+                type: QuestionType.Instruction,
+                text: "Thank you for your responses! You have completed this survey."
+            }
+        ]
+    }
 ];

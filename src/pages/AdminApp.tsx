@@ -23,6 +23,17 @@ function authHeaders(token: string) {
   };
 }
 
+function formatPointList(points) {
+  if (!points || !points.length) return '—';
+  return points.map(point => {
+    const moisture = Number(point.moisture);
+    const strength = Number(point.strength);
+    const moistureText = isNaN(moisture) ? '?' : moisture.toFixed(2);
+    const strengthText = isNaN(strength) ? '?' : strength.toFixed(2);
+    return '(' + moistureText + ', ' + strengthText + ')';
+  }).join(', ');
+}
+
 function formatTime(ms: number) {
   if (!ms) return '';
   const date = new Date(ms);
@@ -369,6 +380,9 @@ export default function AdminApp() {
           <h2>Session {selected.id}</h2>
           <p>{formatTime(selected.createdAt)} · {branchLabel(selected)} · {isFormal(selected) ? 'Assigned' : 'Manual test (' + selected.explanationChoice + ')'}</p>
           <p>Samples: {sampleCount(selected)} · Data version: {dataVersionLabel(selected)}</p>
+          <p>Hypothesis confidence: {(selected.payload && selected.payload.hypothesisConfidence) || '—'}</p>
+          <p>Important points: {formatPointList(selected.payload && selected.payload.importantPoints)}{selected.payload && selected.payload.importantWeighedEqually ? ' · weighed every point equally' : ''}</p>
+          <p>Ignored points: {formatPointList(selected.payload && selected.payload.ignoredPoints)}</p>
           <p>Conclusion: {(selected.payload && selected.payload.conclusionFreeResponse) || '—'}</p>
           <p>
             <button onClick={() => downloadSession(selected)}>Download JSON</button>
@@ -412,7 +426,7 @@ export default function AdminApp() {
               {((selected.payload && selected.payload.surveyResponses) || []).map((item, i) => (
                 <tr key={i}>
                   <td>{item.text || item.id}</td>
-                  <td>{item.value}</td>
+                  <td>{item.label || item.value}</td>
                 </tr>
               ))}
             </tbody>

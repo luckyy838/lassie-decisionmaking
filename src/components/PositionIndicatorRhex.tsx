@@ -1,7 +1,7 @@
 import * as React from 'react';
 import "../styles/positionIndicatorRhex.scss";
 
-const rhexImage = require('../../assets/rhex_no_background_sprite.png');
+const rhexImage = require('../../assets/sprint_symbol.png');
 
 interface RhexProps {
   left: number;
@@ -17,7 +17,7 @@ export default function PositionIndicatorRhex({ left, top, width, height }: Rhex
           <img
             className="rhex-icon"
             src={rhexImage}
-            style={usePixelSize ? { width, height } : undefined}
+            style={usePixelSize ? { width, height, objectFit: 'contain' } : undefined}
             {...(!usePixelSize ? { width: '25vw', height: '20vh' } : {})}
           />
       </div>

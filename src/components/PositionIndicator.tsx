@@ -92,7 +92,7 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-export default function PositionIndicator({ left, top, type, rowIndex, isHovered, locationIndex, robot, selected = false }) {
+export default function PositionIndicator({ left, top, type, rowIndex, isHovered, locationIndex, robot, selected = false, onSelect = null }) {
   const classes = useStyles();
   const theme = useTheme();
   const [globalState, dispatch] = useStateValue();
@@ -116,21 +116,48 @@ export default function PositionIndicator({ left, top, type, rowIndex, isHovered
                   ${isHovered ? classes.hover : ''}
                   ${isSelected ? classes.selected : ''}`}
       style={robot
-        ? { left, top, transform: 'translate(-50%, 1px)', zIndex: 7, pointerEvents: 'none' }
+        ? { left, top, transform: 'translate(-50%, 0)', zIndex: 7, pointerEvents: 'none', lineHeight: 0, fontSize: 0 }
         : { left, top }}
     >
       {!robot && <span className="dot" style={{ backgroundColor: locationColors[locationIndex] }}></span>}
       {robot && (
-        <span
-          className="content"
-          style={{
-            color: isSelected ? '#cc0000' : theme.palette.secondary.main,
-            fontSize: 10,
-            fontWeight: 700,
-            borderColor: isSelected ? '#cc0000' : locationColors[locationIndex],
-          }}
-        >
-          {String.fromCharCode(rowIndex + 65)}
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '3px solid transparent',
+              borderRight: '3px solid transparent',
+              borderBottom: '5px solid ' + (isSelected ? '#cc0000' : theme.palette.secondary.main),
+            }}
+          />
+          <span
+            aria-hidden="true"
+            style={{
+              width: 1,
+              height: 16,
+              background: isSelected ? '#cc0000' : theme.palette.secondary.main,
+            }}
+          />
+          <span
+            className="content"
+            onClick={onSelect ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onSelect();
+            } : undefined}
+            style={{
+              color: isSelected ? '#cc0000' : theme.palette.secondary.main,
+              fontSize: 10,
+              fontWeight: 700,
+              borderColor: isSelected ? '#cc0000' : locationColors[locationIndex],
+              pointerEvents: onSelect ? 'auto' : 'none',
+              cursor: onSelect ? 'pointer' : 'default',
+            }}
+          >
+            {String.fromCharCode(rowIndex + 65)}
+          </span>
         </span>
       )}
     </span>
