@@ -4,3 +4,5 @@ dist/*
 flask/venv/
 flask/explanation_balance.json
 flask/lassie_local.db
+
+assets/spirit.original.mp4
