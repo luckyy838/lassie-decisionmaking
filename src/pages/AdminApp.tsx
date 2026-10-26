@@ -560,7 +560,7 @@ export default function AdminApp() {
           </div>
           <p>Hypothesis confidence: {(selected.payload && selected.payload.hypothesisConfidence) || '—'}</p>
           <p>Important points: {formatPointList(selected.payload && selected.payload.importantPoints)}{selected.payload && selected.payload.importantWeighedEqually ? ' · weighed every point equally' : ''}</p>
-          <p>Ignored points: {formatPointList(selected.payload && selected.payload.ignoredPoints)}</p>
+          <p>Ignored points: {formatPointList(selected.payload && selected.payload.ignoredPoints)}{selected.payload && selected.payload.ignoredConsideredEveryPoint ? ' · considered every data point' : ''}</p>
           <p>Conclusion: {(selected.payload && selected.payload.conclusionFreeResponse) || '—'}</p>
           <p>
             <button onClick={() => downloadSession(selected)}>Download JSON</button>

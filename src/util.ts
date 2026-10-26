@@ -258,15 +258,6 @@ export function countUserChosenSamples(samples: Sample[]): number {
   return samples.filter(s => s.type !== 'initial').length;
 }
 
-export function getExpQueryParam(): string | null {
-  const fromSearch = new URLSearchParams(window.location.search).get('exp');
-  if (fromSearch) return fromSearch;
-  const hash = window.location.hash;
-  const qIndex = hash.indexOf('?');
-  if (qIndex === -1) return null;
-  return new URLSearchParams(hash.slice(qIndex)).get('exp');
-}
-
 /** Assign with/without on the Flask server so counts stay near 50/50 across users. */
 export function assignBalancedExplanation(forced?: boolean | null): Promise<boolean> {
   return fetch('http://127.0.0.1:5000/assign_explanation', {

@@ -493,45 +493,6 @@
     // }
   }
 
-.layoutToggle {
-    position: fixed;
-    left: 12px;
-    bottom: 12px;
-    z-index: 10050;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #114B5F;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-    font-size: 12px;
-    color: #114B5F;
-
-    .layoutToggleLabel {
-        font-weight: 700;
-        margin-right: 4px;
-    }
-
-    button {
-        border: 1px solid #114B5F;
-        background: #fff;
-        color: #114B5F;
-        border-radius: 4px;
-        padding: 2px 8px;
-        cursor: pointer;
-        font-size: 12px;
-        line-height: 1.4;
-    }
-
-    button.active {
-        background: #114B5F;
-        color: #fff;
-    }
-}
-
 .decisionPage > .user-feedback,
 .decisionPage > .user-feedback-flashing {
     position: fixed;

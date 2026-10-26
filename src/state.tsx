@@ -56,6 +56,7 @@ export interface IState {
   importantPoints: ConclusionPoint[],
   ignoredPoints: ConclusionPoint[],
   importantWeighedEqually: boolean,
+  ignoredConsideredEveryPoint: boolean,
    //LUCKY resolution method
   initialResolutionMethod: number,
   // Chart fields
@@ -131,6 +132,7 @@ export const initialState : IState = {
   importantPoints: [],
   ignoredPoints: [],
   importantWeighedEqually: false,
+  ignoredConsideredEveryPoint: false,
   initialResolutionMethod: 0,
   chart: null,
   chartSettings: {
@@ -203,6 +205,7 @@ export enum Action {
     SET_IMPORTANT_POINTS,
     SET_IGNORED_POINTS,
     SET_IMPORTANT_WEIGHED_EQUALLY,
+    SET_IGNORED_CONSIDERED_EVERY_POINT,
     SET_INITIAL_RESOLUTION_METHOD,
     SET_SELECTED_POINT_FROM_CHART,
     SET_CHART,
@@ -243,6 +246,7 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_IMPORTANT_POINTS]: 'importantPoints',
   [Action.SET_IGNORED_POINTS]: 'ignoredPoints',
   [Action.SET_IMPORTANT_WEIGHED_EQUALLY]: 'importantWeighedEqually',
+  [Action.SET_IGNORED_CONSIDERED_EVERY_POINT]: 'ignoredConsideredEveryPoint',
   [Action.SET_INITIAL_RESOLUTION_METHOD]:'initialResolutionMethod',
   [Action.SET_CHART]: 'chart',
   [Action.SET_CHART_SETTINGS]: 'chartSettings',

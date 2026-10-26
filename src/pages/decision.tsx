@@ -3,23 +3,25 @@
 //TODO: add resolution methods 
 
 import * as React from 'react';
+import { unstable_batchedUpdates } from 'react-dom';
 import { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Button from '@material-ui/core/Button'
-import Grid from '@material-ui/core/Grid';
 
 import HelpIcon from '@material-ui/icons/Help';
 import { FormControl, Select, MenuItem, CircularProgress, Slider, Box } from '@material-ui/core';
 import Popbox from '../components/Popbox';
 import ClickableImage from '../components/ClickableImage';
 import { ConfirmDialog, MultiStepDialog } from '../components/Dialogs';
-import { getMeasurements, calculateRobotSuggestions, countUserChosenSamples, getExpQueryParam, assignBalancedExplanation } from '../util';
+import { getMeasurements, calculateRobotSuggestions, countUserChosenSamples, assignBalancedExplanation } from '../util';
 import {
   PopboxTypeEnum, resolutionTexts, NUM_OF_HYPOS,
   UserFeedbackState, objectiveOptions, transitionOptions,
-  MAX_USER_SAMPLES, explanationChoiceTexts, decisionConfidenceTexts,
+  MAX_USER_SAMPLES, decisionConfidenceTexts, NUM_MEASUREMENTS, sampleLocations,
 } from '../constants';
+import { instructionExamples, instructionPlanIndex } from '../data/instructionExample';
 import { useStateValue, Action } from '../state';
+import { returnToScenarioIntroduction } from './intro';
 import ChartPanel from '../components/ChartPanel';
 import ExplanationPanel from '../components/ExplanationPanel';
 import TransectAlignGuides from '../components/TransectAlignGuides';
@@ -52,15 +54,7 @@ export const rejectReasonOptionsGlobal:string[] = [];
 
 export default function Main() {
   const [showImgAlert, setImgAlert] = useState(false);
-  const [layoutMode, setLayoutMode] = useState(() => {
-    try {
-      return sessionStorage.getItem('lassieLayoutMode') === 'new' ? 'new' : 'old';
-    } catch (err) {
-      return 'old';
-    }
-  });
   const [focusedChart, setFocusedChart] = useState<'scatter' | 'dune' | 'transect' | null>(null);
-  const [explanationChoiceIndex, setExplanationChoiceIndex] = useState(-1);
   const [globalState, dispatch] = useStateValue();
 
   const { currSampleIdx, samples, currUserStep, userSteps, chart, chartSettings, explanationChart, explanationChartSettings,
@@ -95,6 +89,82 @@ export default function Main() {
   }, []);
 
   useEffect(() => {
+    if (globalState.explanationEnabled != null && globalState.explanationChoice != null) {
+      return;
+    }
+    let cancelled = false;
+    assignBalancedExplanation().then((enabled) => {
+      if (cancelled) return;
+      dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: enabled });
+      dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: 'random' });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const chosenRewardLineOn = React.useRef(false);
+  useEffect(() => {
+    const showChosenLine = explanationEnabled === true && !!userSample && (
+      userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION ||
+      userFeedbackState === UserFeedbackState.REJECT_REASON ||
+      userFeedbackState === UserFeedbackState.REJECT_REASON_FREE_RESPONSE ||
+      userFeedbackState === UserFeedbackState.DECISION_CONFIDENCE
+    );
+    if (!showChosenLine && !chosenRewardLineOn.current) {
+      return;
+    }
+    chosenRewardLineOn.current = showChosenLine;
+    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
+  }, [userSample, userFeedbackState, explanationEnabled]);
+
+  const instructionExampleOn = React.useRef(false);
+  useEffect(() => {
+    const inInstruction =
+      userFeedbackState === UserFeedbackState.TUTORIAL1 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL2 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL3 ||
+      userFeedbackState === UserFeedbackState.TUTORIAL4;
+    if (explanationEnabled === true && inInstruction) {
+      const version = globalState.dataVersion.local === 0 ? 0 : 1;
+      const example = instructionExamples[version];
+      const plan = sampleLocations[instructionPlanIndex];
+      unstable_batchedUpdates(() => {
+        dispatch({ type: Action.SET_SPATIAL_REWARD, value: example.spatialReward });
+        dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: example.discrepancyReward });
+        dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: example.suggestions });
+        dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
+        dispatch({
+          type: Action.SET_DESIRED_WAYPOINT,
+          value: {
+            index: instructionPlanIndex,
+            type: 'user',
+            measurements: NUM_MEASUREMENTS,
+            normOffsetX: plan[0],
+            normOffsetY: plan[1],
+            isHovered: false,
+          },
+        });
+        dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
+      });
+      instructionExampleOn.current = true;
+      return;
+    }
+    if (!instructionExampleOn.current) {
+      return;
+    }
+    unstable_batchedUpdates(() => {
+      dispatch({ type: Action.SET_SPATIAL_REWARD, value: [] });
+      dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: [] });
+      dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: [] });
+      dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: false });
+      dispatch({ type: Action.SET_DESIRED_WAYPOINT, value: null });
+      dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
+    });
+    instructionExampleOn.current = false;
+  }, [explanationEnabled, userFeedbackState]);
+
+  useEffect(() => {
     if (
       userFeedbackState === UserFeedbackState.TUTORIAL1 ||
       userFeedbackState === UserFeedbackState.TUTORIAL2 ||
@@ -103,16 +173,10 @@ export default function Main() {
     ) {
       dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
     }
-  }, [userFeedbackState]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('lassieLayoutMode', layoutMode);
-    } catch (err) {}
-    if (layoutMode === 'old') {
-      setFocusedChart(null);
+    if (userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE) {
+      dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL4 });
     }
-  }, [layoutMode]);
+  }, [userFeedbackState]);
 
   useEffect(() => {
     const resizeScatter = () => {
@@ -141,7 +205,7 @@ export default function Main() {
       resizeScatter();
       applyExplanationChartLayout(explanationChartRef.current);
     };
-    const main = document.querySelector('.decisionPage.layout-new .decisionMain');
+    const main = document.querySelector('.decisionPage .decisionMain');
     const onTransitionEnd = (ev: any) => {
       const prop = ev && ev.propertyName ? String(ev.propertyName) : '';
       if (prop && prop.indexOf('grid-template') === -1) {
@@ -160,7 +224,7 @@ export default function Main() {
         main.removeEventListener('transitionend', onTransitionEnd);
       }
     };
-  }, [layoutMode, focusedChart]);
+  }, [focusedChart]);
   
   
   // Initial page set up
@@ -299,11 +363,7 @@ export default function Main() {
       dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: decisionConfidence < 0 });
     }
 
-    if (userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE) {
-      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: explanationChoiceIndex < 0 });
-    }
-
-  }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled, explanationChoiceIndex]);
+  }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled]);
 
 
   const searchObjective = (target : string) => {
@@ -503,18 +563,9 @@ const onObjectiveTextChange = e => {
       <p><strong>Select a location where you would prefer to collect data next by clicking on the dune cross-section. An orange star will mark the location you select before you see Spirit's suggestions.</strong></p>
     </div>
 
-  const explanationChoiceQuestion =
-    <div className="explanation-choice-question">
-      <p><strong>Do you want to see the explanation chart under the dune map?</strong></p>
-      <RadioButtonGroup options={explanationChoiceTexts} selectedIndex={explanationChoiceIndex} onChange={i => {
-        setExplanationChoiceIndex(i);
-        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
-      }}/>
-    </div>
-
   const confidenceMarks = decisionConfidenceTexts.map((label, i) => ({ value: i, label }));
 
-  const decisionConfidenceQuestion = layoutMode === 'new' ? (
+  const decisionConfidenceQuestion = (
     <div className="decision-confidence-question decision-confidence-slider">
       <p><strong><i>How confident are you in your decision to collect data at the location you selected?</i></strong></p>
       <div className="slider-box">
@@ -534,14 +585,6 @@ const onObjectiveTextChange = e => {
           />
         </Box>
       </div>
-    </div>
-  ) : (
-    <div className="decision-confidence-question">
-      <p><strong>How confident are you in your decision to collect data at the location you selected?</strong></p>
-      <RadioButtonGroup options={decisionConfidenceTexts} selectedIndex={decisionConfidence} onChange={i => {
-        dispatch({ type: Action.SET_DECISION_CONFIDENCE, value: i });
-        dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
-      }}/>
     </div>
   )
 
@@ -620,10 +663,11 @@ const resMethod =
       <p>Once data has been collected at a location, the location will be marked with a color corresponding to the data in the data panel.</p>
     </div>
 
-const tutorial3 = 
+  const tutorial3 = 
 <div className = 'tutorial3'>
   <p>A reward function corresponding to Spirit’s suggested locations along the dune is displayed under the dune cross-section. Reward is displayed on the y-axis, location along the dune transect is displayed on the x-axis.</p>
   <p>Spirit’s suggestions represent locations it deems highly rewarding based on the balancing of two objectives: information coverage (displayed in purple) and hypothesis evaluation (displayed in green).</p>
+  <p>The curves and the lettered mark on the dune are an example of what appears after a plan is marked. In this example, the plan is the orange star on the red sample near the crest.</p>
 </div>
 
 const tutorial1 = 
@@ -649,7 +693,7 @@ const tutorial4 =
     tutorial2,
     tutorial3,
     tutorial4,
-    explanationChoiceQuestion,
+    null,
     objectiveRankings,
     resMethod,
     desiredWaypointQuestion,
@@ -695,18 +739,21 @@ const tutorial4 =
   };
 
   const onPrevious = () => {
+    if (userFeedbackState === UserFeedbackState.TUTORIAL1) {
+      returnToScenarioIntroduction();
+      history.push('/');
+      return;
+    }
     if (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT && countUserChosenSamples(samples) > 0) {
       return;
     }
-    const expParam = getExpQueryParam();
     const previousState = {
       [UserFeedbackState.TUTORIAL2]: UserFeedbackState.TUTORIAL1,
       [UserFeedbackState.TUTORIAL3]: UserFeedbackState.TUTORIAL2,
-      [UserFeedbackState.TUTORIAL4]: UserFeedbackState.TUTORIAL3,
-      [UserFeedbackState.EXPLANATION_CHOICE]: UserFeedbackState.TUTORIAL4,
-      [UserFeedbackState.RANK_OBJECTIVES]: (expParam === 'on' || expParam === 'off')
-        ? UserFeedbackState.TUTORIAL4
-        : UserFeedbackState.EXPLANATION_CHOICE,
+      [UserFeedbackState.TUTORIAL4]: explanationEnabled === true
+        ? UserFeedbackState.TUTORIAL3
+        : UserFeedbackState.TUTORIAL2,
+      [UserFeedbackState.RANK_OBJECTIVES]: UserFeedbackState.TUTORIAL4,
       [UserFeedbackState.RES_METHOD]: UserFeedbackState.RANK_OBJECTIVES,
       [UserFeedbackState.DESIRED_WAYPOINT]: UserFeedbackState.RES_METHOD,
     }[userFeedbackState];
@@ -733,7 +780,10 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.TUTORIAL2: {
-        dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.TUTORIAL3 });
+        dispatch({
+          type: Action.SET_USER_FEEDBACK_STATE,
+          value: explanationEnabled === true ? UserFeedbackState.TUTORIAL3 : UserFeedbackState.TUTORIAL4,
+        });
         return;
       }
       case UserFeedbackState.TUTORIAL3: {
@@ -741,37 +791,6 @@ const tutorial4 =
         return;
       }
       case UserFeedbackState.TUTORIAL4: {
-        const expParam = getExpQueryParam();
-        if (expParam === 'on' || expParam === 'off') {
-          dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: expParam === 'on' });
-          dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: expParam === 'on' ? 'with' : 'without' });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
-        } else {
-          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.EXPLANATION_CHOICE });
-        }
-        return;
-      }
-      case UserFeedbackState.EXPLANATION_CHOICE: {
-        const nextChoice = explanationChoiceIndex === 0 ? 'with' : explanationChoiceIndex === 1 ? 'without' : 'random';
-        if (globalState.explanationChoice === nextChoice) {
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
-          return;
-        }
-        let enabled = false;
-        let choice: 'with' | 'without' | 'random' = 'without';
-        if (explanationChoiceIndex === 0) {
-          enabled = await assignBalancedExplanation(true);
-          choice = 'with';
-        } else if (explanationChoiceIndex === 1) {
-          enabled = await assignBalancedExplanation(false);
-          choice = 'without';
-        } else {
-          enabled = await assignBalancedExplanation();
-          choice = 'random';
-        }
-        dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: enabled });
-        dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: choice });
         dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.RANK_OBJECTIVES });
         return;
       }
@@ -873,17 +892,14 @@ const tutorial4 =
   }
   const userChosenSampleCount = countUserChosenSamples(samples);
   const showPrevious = inTutorial
-    ? userFeedbackState !== UserFeedbackState.TUTORIAL1
+    ? true
     : (
-      userFeedbackState === UserFeedbackState.EXPLANATION_CHOICE ||
       userFeedbackState === UserFeedbackState.RANK_OBJECTIVES ||
       userFeedbackState === UserFeedbackState.RES_METHOD ||
       (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT && userChosenSampleCount === 0)
     );
   const clickIsForMap = userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION || userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT;
-  const showExplanationChart =
-    explanationEnabled !== false ||
-    userFeedbackState <= UserFeedbackState.EXPLANATION_CHOICE;
+  const showExplanationChart = explanationEnabled === true;
 
   useEffect(() => {
     if (!showExplanationChart && focusedChart === 'transect') {
@@ -921,30 +937,6 @@ const tutorial4 =
         </svg>
       )}
     </button>
-  );
-
-  // Right panel to display when collecting data, sampleState != FINISH_TRANSECT
-  const collectionRightPanel = (
-    <div className="collectionRightPanel">
-      <ImgAlert open={!!showImgAlert} />
-      <div className="sampleCountInline" style={{ textAlign: 'center', fontSize: '13px', marginBottom: '6px' }}>
-        Samples collected: {userChosenSampleCount} of {MAX_USER_SAMPLES}
-      </div>
-      <Tooltip title={!clickIsForMap ? "" : <span style={clickableImageTipStyle}>{clickableImageTip}</span>} placement="bottom">
-      <div className={`clickableImageContainer ${userFeedbackState === UserFeedbackState.TUTORIAL2 ? 'flashing-red-border' : ''}`}>
-            <ClickableImage
-              width={750}
-              enabled={imgClickEnabled}
-              addDataFunc={() => addDataToPlot()}
-              setPopOver={setImgAlert}
-              clickMode={userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT ? 'intent' : 'sample'}
-            />  
-          </div>
-      </Tooltip>
-      <div className={`explanationPanel`} style={{ display: showExplanationChart ? undefined : 'none' }}>
-      <ExplanationPanel/>
-      </div>
-    </div>
   );
 
   const userFeedbackPanel = !loadingRobotSuggestions ? (
@@ -1026,16 +1018,10 @@ const tutorial4 =
   }
 
   return (
-    <div id="app" className={`decisionPage layout-${layoutMode}`}>
+    <div id="app" className="decisionPage layout-new">
       { helperOpen && <Helper /> }
       { decisionHypothesisDialog }
       { decisionHelpDialog }
-
-      <div className="layoutToggle" title="Demo only: switch page layout">
-        <span className="layoutToggleLabel">Layout</span>
-        <button type="button" className={layoutMode === 'old' ? 'active' : ''} onClick={() => setLayoutMode('old')}>Old</button>
-        <button type="button" className={layoutMode === 'new' ? 'active' : ''} onClick={() => setLayoutMode('new')}>New</button>
-      </div>
 
       <div className="decisionTopBar">
         <div className="decisionTopBarCount">
@@ -1067,26 +1053,7 @@ const tutorial4 =
         onOk={onQuit}
       />
 
-      <div className={`decisionMain${layoutMode === 'new' ? ` chartFocus-${focusedChart || 'none'}${showExplanationChart ? '' : ' no-reward'}` : ''}`}>
-      {layoutMode === 'old' ? (
-      <Grid container>
-        <Grid container>
-          <Grid item xs={12} md={6} className="leftDecisionPanel">
-            <ChartPanel fullSize={true} mode={"TransectView"}/>
-          </Grid>
-          <Grid item xs={12} md={6} className="rightDecisionPanel">
-          <div
-          className={`rightDecisionPanelContainer ${
-            userFeedbackState === UserFeedbackState.TUTORIAL3 ? 'rightDecisionPanelContainer-flashing' : ''
-               }`}
-            >
-              { collectionRightPanel }
-            </div>
-            
-          </Grid>
-        </Grid>
-      </Grid>
-      ) : (
+      <div className={`decisionMain chartFocus-${focusedChart || 'none'}${showExplanationChart ? '' : ' no-reward'}`}>
         <React.Fragment>
           <div className={`chartCard chartCard-scatter${userFeedbackState === UserFeedbackState.TUTORIAL1 ? ' tutorial-oval' : ''}`}>
             {chartExpandButton('scatter')}
@@ -1134,7 +1101,6 @@ const tutorial4 =
             </div>
           )}
         </React.Fragment>
-      )}
       </div>
       { userFeedbackPanel }
     </div>

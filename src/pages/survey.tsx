@@ -369,6 +369,7 @@ export default function Survey() {
             importantPoints: globalState.importantPoints || [],
             ignoredPoints: globalState.ignoredPoints || [],
             importantWeighedEqually: !!globalState.importantWeighedEqually,
+            ignoredConsideredEveryPoint: !!globalState.ignoredConsideredEveryPoint,
             userSteps: userSteps,
             surveyResponses: surveyOutput
         };

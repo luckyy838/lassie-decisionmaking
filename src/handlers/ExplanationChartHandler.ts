@@ -1,7 +1,7 @@
 import * as Chart from 'chart.js';
 //import * as BarChart from chart
 import { Action, IState, ExplanationChart } from '../state';
-import { explanationChartOption, sampleLocations, NORMALIZED_HEIGHT } from '../constants';
+import { explanationChartOption, sampleLocations, NORMALIZED_HEIGHT, UserFeedbackState } from '../constants';
 import { notifyTransectGuides } from '../components/TransectAlignGuides';
 import 'chartjs-plugin-annotation';
 
@@ -188,7 +188,7 @@ function alignRewardPlotToDune(chart: any) {
   return true;
 }
 
-function setSuggestionMarkers(chart: any, robotSuggestions: any[]) {
+function setSuggestionMarkers(chart: any, robotSuggestions: any[], chosenWaypointIndex?: number | null) {
   if (!chart || !chart.options) {
     return;
   }
@@ -208,9 +208,19 @@ function setSuggestionMarkers(chart: any, robotSuggestions: any[]) {
       value: waypointToRewardX(idx),
       lineColor: '#111',
       lineWidth: 1.5,
+      borderDash: [4, 3],
       insideLabel: grouped[idx].join('/')
     };
   });
+  if (typeof chosenWaypointIndex === 'number' && chosenWaypointIndex >= 0) {
+    highlights.push({
+      value: waypointToRewardX(chosenWaypointIndex),
+      lineColor: '#111',
+      lineWidth: 2,
+      borderDash: [],
+      insideLabel: grouped[chosenWaypointIndex] ? '' : 'You'
+    });
+  }
   chart.options.annotation = chart.options.annotation || {};
   chart.options.annotation.annotations = buildAnnotations(highlights);
   const pad = readPadding(chart);
@@ -382,7 +392,7 @@ export function applyExplanationChartLayout(chart: any) {
 
 
 /** Build annotation objects (Chart.js v2) for vertical lines at selected x's */
-function buildAnnotations(highlights: Array<{ index?: number; value?: number | string; lineColor?: string; lineWidth?: number; insideLabel?: string }>, labels?: Array<string | number>) {
+function buildAnnotations(highlights: Array<{ index?: number; value?: number | string; lineColor?: string; lineWidth?: number; borderDash?: number[]; insideLabel?: string }>, labels?: Array<string | number>) {
   return (highlights || [])
     .map(h => {
       let xVal: number | string | undefined;
@@ -401,6 +411,7 @@ function buildAnnotations(highlights: Array<{ index?: number; value?: number | s
         value: xVal,
         borderColor: h.lineColor || 'black',
         borderWidth: h.lineWidth || 2,
+        borderDash: h.borderDash || [],
         insideLabel: h.insideLabel || '',
         label: {
           enabled: false,
@@ -430,7 +441,13 @@ function setHighlights(explanationChart: any, highlights: Array<{ index?: number
 
 export const updateExplanationChart = (globalState: IState, dispatch: any) => {
     const { currUserStep } = globalState;
-    const { spatialReward, discrepancyReward, robotSuggestions} = currUserStep;
+    const { spatialReward, discrepancyReward, robotSuggestions, userSample, userFeedbackState } = currUserStep;
+    const showChosenLine =
+      userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION ||
+      userFeedbackState === UserFeedbackState.REJECT_REASON ||
+      userFeedbackState === UserFeedbackState.REJECT_REASON_FREE_RESPONSE ||
+      userFeedbackState === UserFeedbackState.DECISION_CONFIDENCE;
+    const chosenWaypointIndex = showChosenLine && userSample ? userSample.index : null;
 
     let { explanationChart } = globalState;
     const canvas = document.getElementById('explanationChart') as HTMLCanvasElement | null;
@@ -459,7 +476,7 @@ export const updateExplanationChart = (globalState: IState, dispatch: any) => {
       };
     }
 
-    setSuggestionMarkers(explanationChart, robotSuggestions);
+    setSuggestionMarkers(explanationChart, robotSuggestions, chosenWaypointIndex);
     applyExplanationChartLayout(explanationChart);
     if (explanationChart.update) {
       explanationChart.update(0);

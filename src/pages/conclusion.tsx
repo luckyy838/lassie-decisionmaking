@@ -37,6 +37,7 @@ export default function Conclusion() {
   const importantPoints = globalState.importantPoints || [];
   const ignoredPoints = globalState.ignoredPoints || [];
   const importantWeighedEqually = !!globalState.importantWeighedEqually;
+  const ignoredConsideredEveryPoint = !!globalState.ignoredConsideredEveryPoint;
   const confidenceMarks = decisionConfidenceTexts.map((label, i) => ({ value: i, label }));
 
   const [step, setStep] = useState<'confidence' | 'important' | 'ignored'>('confidence');
@@ -90,10 +91,15 @@ export default function Conclusion() {
         strength: raw.y,
       };
       const live = selectionRef.current;
-      const current = live.step === 'ignored' ? live.ignoredPoints : live.importantPoints;
+      const onIgnored = live.step === 'ignored';
+      const current = onIgnored ? live.ignoredPoints : live.importantPoints;
       dispatch({
-        type: live.step === 'ignored' ? Action.SET_IGNORED_POINTS : Action.SET_IMPORTANT_POINTS,
+        type: onIgnored ? Action.SET_IGNORED_POINTS : Action.SET_IMPORTANT_POINTS,
         value: togglePoint(current, point),
+      });
+      dispatch({
+        type: onIgnored ? Action.SET_IGNORED_CONSIDERED_EVERY_POINT : Action.SET_IMPORTANT_WEIGHED_EQUALLY,
+        value: false,
       });
     } : null;
     if (chart.canvas) {
@@ -196,7 +202,11 @@ export default function Conclusion() {
                       <Checkbox
                         checked={importantWeighedEqually}
                         onChange={(event) => {
-                          dispatch({ type: Action.SET_IMPORTANT_WEIGHED_EQUALLY, value: event.target.checked });
+                          const checked = event.target.checked;
+                          dispatch({ type: Action.SET_IMPORTANT_WEIGHED_EQUALLY, value: checked });
+                          if (checked) {
+                            dispatch({ type: Action.SET_IMPORTANT_POINTS, value: [] });
+                          }
                         }}
                         color="primary"
                       />
@@ -214,9 +224,27 @@ export default function Conclusion() {
                 <div className="text" style={{ marginTop: '1%' }}>
                   <p><strong>Are there any data points that you <u>ignored</u> when making your final judgment about the hypothesis?</strong></p>
                   <p>
-                    Click points on the plot. Selected points are circled in gray. Click a circled point again to remove it. You can continue without selecting any points.
+                    Click points on the plot. Selected points are circled in gray. Click a circled point again to remove it. You can continue without selecting any points. OR check the box below if you considered every data point.
                   </p>
                 </div>
+                <p>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={ignoredConsideredEveryPoint}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          dispatch({ type: Action.SET_IGNORED_CONSIDERED_EVERY_POINT, value: checked });
+                          if (checked) {
+                            dispatch({ type: Action.SET_IGNORED_POINTS, value: [] });
+                          }
+                        }}
+                        color="primary"
+                      />
+                    }
+                    label="I considered every data point when making my decision about the hypothesis"
+                  />
+                </p>
                 <div className="conclusionNav">
                   <Button variant="contained" color="primary" onClick={() => setStep('important')}>Previous</Button>
                   <Button variant="contained" color="primary" onClick={onSurveyClick}>Next</Button>

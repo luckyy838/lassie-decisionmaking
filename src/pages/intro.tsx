@@ -9,9 +9,26 @@ import ProgressBar from '../components/ProgressBar';
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import { useStateValue, Action } from '../state';
 import { resolutionTexts } from '../constants';
+import { assignBalancedExplanation } from '../util';
 import "../styles/intro.scss";
 import RadioButtonGroup from '../components/RadioButtonGroup';
 const competingLocalHypo = require('../../assets/CompetingLocalHypo.png');
+
+const INTRO_START_KEY = 'lassieIntroStart';
+
+export function returnToScenarioIntroduction() {
+    try {
+        sessionStorage.setItem(INTRO_START_KEY, 'scenario');
+    } catch (err) {}
+}
+
+function openOnScenario() {
+    try {
+        return sessionStorage.getItem(INTRO_START_KEY) === 'scenario';
+    } catch (err) {
+        return false;
+    }
+}
 
 function SpiritVideo() {
     const videoRef = React.useRef<HTMLVideoElement>(null);
@@ -42,7 +59,9 @@ export default function Intro(props) {
     const history = useHistory();
     const [globalState, dispatch] = useStateValue();
     const { initialResolutionMethod } = globalState;
-    const [currentPage, setCurrentPage] = useState(0);
+    const returnedToScenario = React.useRef(openOnScenario());
+    const assigningExplanation = React.useRef(false);
+    const [currentPage, setCurrentPage] = useState(() => openOnScenario() ? 1 : 0);
     const [animationDirection, setAnimationDirection] = useState("Right");
     const pageCount = 2; // Updated page count to 3
 
@@ -69,9 +88,25 @@ export default function Intro(props) {
         }, 100);
     }
 
-    const onNextClick = () => {
+    const onNextClick = async () => {
+        if (currentPage === 0 && (globalState.explanationEnabled == null || globalState.explanationChoice == null)) {
+            if (assigningExplanation.current) {
+                return;
+            }
+            assigningExplanation.current = true;
+            try {
+                const enabled = await assignBalancedExplanation();
+                dispatch({ type: Action.SET_EXPLANATION_ENABLED, value: enabled });
+                dispatch({ type: Action.SET_EXPLANATION_CHOICE, value: 'random' });
+            } finally {
+                assigningExplanation.current = false;
+            }
+        }
         //if done with intro, go to decision page
         if (currentPage + 1 >= pageCount) {
+            try {
+                sessionStorage.removeItem(INTRO_START_KEY);
+            } catch (err) {}
             dispatch({
                 type: Action.SET_INTRO_STATUS, 
                 value: true
@@ -227,7 +262,9 @@ export default function Intro(props) {
                     </div>
                     <SpiritVideo />
                     <div className="buttonRow buttonRowInline">
-                        <Button onClick={onBackClick} color='primary' variant='contained'>Previous</Button>
+                        {!returnedToScenario.current && (
+                            <Button onClick={onBackClick} color='primary' variant='contained'>Previous</Button>
+                        )}
                         <Button disabled={nextDisable} onClick={onNextClick} color='primary' variant='contained' className="buttonRowButton">Next</Button>
                     </div>
                 </div>

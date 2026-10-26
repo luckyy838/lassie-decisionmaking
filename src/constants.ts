@@ -212,12 +212,6 @@ export const resolutionMethodShortNames = [
   'Hierarchical',
 ];
 
-export const explanationChoiceTexts = [
-  'With explanation',
-  'Without explanation',
-  'Random',
-];
-
 export const decisionConfidenceTexts = [
   '1 - Not at all confident',
   '2 - Slightly confident',

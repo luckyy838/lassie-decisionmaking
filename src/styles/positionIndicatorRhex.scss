@@ -1,6 +1,7 @@
 .rhex-icon {
     display: inline-block;
     position: absolute;
+    pointer-events: none;
     animation-name: bounce;
     animation-iteration-count: infinite;
     animation-direction: alternate;
