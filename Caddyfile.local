@@ -1,0 +1,20 @@
+# Preview the production build on one origin. Run from the repository root:
+#   caddy run --config Caddyfile.local
+localhost:8000 {
+	route {
+		@api path /process* /assign_explanation* /sessions* /admin/login* /admin/sessions*
+		reverse_proxy @api 127.0.0.1:5000
+
+		handle /admin* {
+			root * dist
+			try_files {path} {path}/ /admin/index.html
+			file_server
+		}
+
+		handle {
+			root * dist
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+	}
+}

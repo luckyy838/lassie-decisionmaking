@@ -13,7 +13,13 @@ module.exports = env => {
     ],
     devServer: {
       open: true,
-      contentBase: path.join(__dirname, 'assets')
+      contentBase: path.join(__dirname, 'assets'),
+      proxy: [
+        {
+          context: ['/process', '/assign_explanation', '/sessions', '/admin/login', '/admin/sessions'],
+          target: 'http://127.0.0.1:5000'
+        }
+      ]
     }
   });
 };

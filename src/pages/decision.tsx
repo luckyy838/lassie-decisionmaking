@@ -29,7 +29,7 @@ import TransectAlignGuides from '../components/TransectAlignGuides';
 import "../styles/decision.scss";
 import { CurrUserStepData, UserStepsData, Sample, PreSample } from '../types';
 import { initializeCharts } from '../handlers/ChartHandler';
-import { initializeExplanationChart, applyExplanationChartLayout } from '../handlers/ExplanationChartHandler';
+import { applyExplanationChartLayout } from '../handlers/ExplanationChartHandler';
 import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupMultipleOptions from '../components/RadioButtonGroupMultipleOptions';
 import RadioButtonGroupMultipleSelectionOptions from '../components/RadioButtonGroupMultipleSelectionOptions';
@@ -282,10 +282,6 @@ export default function Main() {
     initializeCharts(globalState, dispatch);
     // Make the charts update on first render
     dispatch({ type: Action.SET_CHART_SETTINGS, value: {...chartSettings, updateRequired: true} });
-
-    //LUCKY starting this chart as well
-    initializeExplanationChart(globalState, dispatch);
-    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true}});
   }, []);
 
   // Function to add next sample to the data plot

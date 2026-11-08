@@ -779,6 +779,8 @@
         height: auto !important;
         display: block;
         object-fit: contain;
+        -webkit-user-drag: none;
+        user-select: none;
     }
 
     .chartCard-dune #clickable-image .rhex-icon img {

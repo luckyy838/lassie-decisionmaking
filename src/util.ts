@@ -260,7 +260,7 @@ export function countUserChosenSamples(samples: Sample[]): number {
 
 /** Assign with/without on the Flask server so counts stay near 50/50 across users. */
 export function assignBalancedExplanation(forced?: boolean | null): Promise<boolean> {
-  return fetch('http://127.0.0.1:5000/assign_explanation', {
+  return fetch('/assign_explanation', {
     method: 'POST',
     mode: 'cors',
     cache: 'no-cache',
@@ -285,7 +285,7 @@ export function assignBalancedExplanation(forced?: boolean | null): Promise<bool
 
 /** Save a finished session into the local SQLite file served by Flask. */
 export function saveLocalSession(log: object): Promise<void> {
-  return fetch('http://127.0.0.1:5000/sessions', {
+  return fetch('/sessions', {
     method: 'POST',
     mode: 'cors',
     cache: 'no-cache',
@@ -433,7 +433,7 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
 //     //fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
 //     // https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process // production URL1 From UPenn
 //     // http://ec2-54-183-157-53.us-west-1.compute.amazonaws.com:8080/process // production URL2 From AWS EC2
-//     fetch('http://127.0.0.1:5000/process', { //local development URL
+//     fetch('/process', { //local development URL
 //       method: 'POST',
 //       mode: 'cors',
 //       cache: 'no-cache',
@@ -468,7 +468,7 @@ function flaskCalculations(locations: number[], measurements: number[], moisture
   // console.log("locations" + locations)
   return new Promise((resolve, reject) => {
     // fetch('https://fling.seas.upenn.edu/~foraging/cgi-bin/application.cgi/process', { //production URL
-    fetch('http://127.0.0.1:5000/process', { //local development URL
+    fetch('/process', { //local development URL
       method: 'POST',
       mode: 'cors', //NOTE 4/10 this was just cors before
       cache: 'no-cache',

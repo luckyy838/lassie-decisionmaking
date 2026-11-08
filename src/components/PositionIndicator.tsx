@@ -92,12 +92,13 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-export default function PositionIndicator({ left, top, type, rowIndex, isHovered, locationIndex, robot, selected = false, onSelect = null }) {
+export default function PositionIndicator({ left, top, type, rowIndex, isHovered, locationIndex, robot, selected = false, onSelect = null as (() => void) | null }) {
   const classes = useStyles();
   const theme = useTheme();
   const [globalState, dispatch] = useStateValue();
   const { currSampleIdx } = globalState;
   const isSelected = !!selected;
+  const selectSuggestion = onSelect;
 
   const onHover = enterOrLeave => {
     dispatch({
@@ -142,18 +143,18 @@ export default function PositionIndicator({ left, top, type, rowIndex, isHovered
           />
           <span
             className="content"
-            onClick={onSelect ? (event) => {
+            onClick={selectSuggestion ? (event) => {
               event.preventDefault();
               event.stopPropagation();
-              onSelect();
+              selectSuggestion();
             } : undefined}
             style={{
               color: isSelected ? '#cc0000' : theme.palette.secondary.main,
               fontSize: 10,
               fontWeight: 700,
               borderColor: isSelected ? '#cc0000' : locationColors[locationIndex],
-              pointerEvents: onSelect ? 'auto' : 'none',
-              cursor: onSelect ? 'pointer' : 'default',
+              pointerEvents: selectSuggestion ? 'auto' : 'none',
+              cursor: selectSuggestion ? 'pointer' : 'default',
             }}
           >
             {String.fromCharCode(rowIndex + 65)}

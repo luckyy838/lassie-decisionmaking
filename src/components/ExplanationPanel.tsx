@@ -8,7 +8,8 @@ import '../styles/explanationPanel.scss';
 
 export default function ExplanationChartPanel() {
   const [globalState, dispatch] = useStateValue();
-  const { explanationChartSettings, explanationChart } = globalState;
+  const { explanationChartSettings, explanationChart, currUserStep } = globalState;
+  const { spatialReward, discrepancyReward, robotSuggestions, userSample, userFeedbackState } = currUserStep;
   const explanationChartRef = useRef(explanationChart);
   explanationChartRef.current = explanationChart;
   const globalStateRef = useRef(globalState);
@@ -18,13 +19,14 @@ export default function ExplanationChartPanel() {
       initializeExplanationChart(globalStateRef.current, dispatch);
   }, []);
 
+  // Redraw from the reward arrays themselves. A boolean flag can stay true
+  // across the suggestion response, so the chart kept the empty series.
   useEffect(() => {
-    if (!explanationChartSettings.updateRequired) {
-      return;
-    }
     updateExplanationChart(globalStateRef.current, dispatch);
-    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: false} });
-  }, [explanationChartSettings.updateRequired]);
+    if (explanationChartSettings.updateRequired) {
+      dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: false} });
+    }
+  }, [spatialReward, discrepancyReward, robotSuggestions, userSample, userFeedbackState, explanationChartSettings.updateRequired]);
 
   useEffect(() => {
     const parent = document.getElementById('explanationChartParent');

@@ -8,7 +8,8 @@ module.exports = env => {
     entry: buildMain ? './src/index.tsx' : './src/adminIndex.tsx',
     output: {
       filename: '[name].[chunkhash].js',
-      path: buildMain ? path.resolve(__dirname, 'dist') : path.resolve(__dirname, 'dist', 'admin')
+      path: buildMain ? path.resolve(__dirname, 'dist') : path.resolve(__dirname, 'dist', 'admin'),
+      publicPath: buildMain ? '/' : '/admin/'
     },
     resolve: {
       // Add '.ts' and '.tsx' as resolvable extensions.

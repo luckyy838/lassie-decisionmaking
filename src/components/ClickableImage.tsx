@@ -287,9 +287,11 @@ export default function ClickableImage({ enabled, addDataFunc, setPopOver, width
     <div id="clickable-image" style={{ position: 'relative' }} >
       <img
         ref={imgHeightRef}
+        draggable={false}
         className={`${fitContainer ? '' : classes.imageDecision} ${enabled ? classes.cross : ''}`}
         id="pos-picker"
         src={diagram}
+        onDragStart={(event) => event.preventDefault()}
         onClick={onImageClick}
       />
       {imgEl && height > 0 && uniqueVisitedSamples.map((sample) => {

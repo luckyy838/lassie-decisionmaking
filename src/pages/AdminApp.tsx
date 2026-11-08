@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import '../styles/admin.scss';
 
-const API = 'http://127.0.0.1:5000';
+const API = '';
 const TOKEN_KEY = 'lassieAdminToken';
 
 type SessionRecord = {
