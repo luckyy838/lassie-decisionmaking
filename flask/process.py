@@ -217,6 +217,12 @@ def init_local_db():
         columns = [row[1] for row in conn.execute('PRAGMA table_info(sessions)')]
         if 'deleted_at' not in columns:
             conn.execute('ALTER TABLE sessions ADD COLUMN deleted_at INTEGER')
+        columns = [row[1] for row in conn.execute('PRAGMA table_info(sessions)')]
+        if 'session_id' not in columns:
+            conn.execute('ALTER TABLE sessions ADD COLUMN session_id TEXT')
+        conn.execute(
+            'CREATE UNIQUE INDEX IF NOT EXISTS sessions_session_id_unique ON sessions(session_id)'
+        )
         conn.commit()
         conn.close()
 
@@ -329,22 +335,47 @@ def save_session():
     payload = request.get_json(force=True, silent=True)
     if not isinstance(payload, dict):
         return jsonify({'error': 'expected a JSON object'}), 400
+    session_id = payload.get('sessionId')
+    if not isinstance(session_id, str) or not session_id.strip():
+        return jsonify({'error': 'sessionId is required'}), 400
+    session_id = session_id.strip()
     created_at = int(time.time() * 1000)
     enabled = payload.get('explanationEnabled')
     enabled_int = None if enabled is None else (1 if enabled else 0)
     choice = payload.get('explanationChoice')
     choice_text = choice if isinstance(choice, str) else None
+    payload_text = json.dumps(payload)
     with _db_lock:
         conn = sqlite3.connect(DB_FILE)
-        cur = conn.execute(
-            'INSERT INTO sessions (created_at, explanation_enabled, explanation_choice, payload) VALUES (?, ?, ?, ?)',
-            (created_at, enabled_int, choice_text, json.dumps(payload)),
-        )
+        existing = conn.execute(
+            'SELECT id, created_at FROM sessions WHERE session_id = ?',
+            (session_id,),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                '''
+                UPDATE sessions
+                SET explanation_enabled = ?, explanation_choice = ?, payload = ?, deleted_at = NULL
+                WHERE session_id = ?
+                ''',
+                (enabled_int, choice_text, payload_text, session_id),
+            )
+            row_id = existing[0]
+            created_at = existing[1]
+        else:
+            cur = conn.execute(
+                '''
+                INSERT INTO sessions
+                    (created_at, explanation_enabled, explanation_choice, payload, session_id)
+                VALUES (?, ?, ?, ?, ?)
+                ''',
+                (created_at, enabled_int, choice_text, payload_text, session_id),
+            )
+            row_id = cur.lastrowid
         conn.commit()
-        row_id = cur.lastrowid
         conn.close()
-    print('saved local session', row_id)
-    return jsonify({'id': row_id, 'createdAt': created_at})
+    print('saved local session', row_id, session_id)
+    return jsonify({'id': row_id, 'createdAt': created_at, 'sessionId': session_id})
 
 
 if __name__ == '__main__':

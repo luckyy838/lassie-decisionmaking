@@ -9,12 +9,11 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import { useStateValue, Action, ConclusionPoint } from '../state';
 import '../styles/conclusion.scss';
 import ChartPanel from '../components/ChartPanel';
-import { initializeCharts, updateCharts } from '../handlers/ChartHandler';
 import { decisionConfidenceTexts } from '../constants';
 import { conclusionPointKey, conclusionPointRing } from '../conclusionPointRing';
 import '../styles/survey.scss';
 
-const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
+const singleTransectNullHypothesis = require('../../assets/Hypothesis_Image.png');
 
 const IMPORTANT_RING = '#111111';
 const IGNORED_RING = '#a6a6a6';
@@ -40,15 +39,17 @@ export default function Conclusion() {
   const ignoredConsideredEveryPoint = !!globalState.ignoredConsideredEveryPoint;
   const confidenceMarks = decisionConfidenceTexts.map((label, i) => ({ value: i, label }));
 
-  const [step, setStep] = useState<'confidence' | 'important' | 'ignored'>('confidence');
+  const [step, setStepState] = useState<'confidence' | 'important' | 'ignored'>(
+    globalState.conclusionStep === 'important' || globalState.conclusionStep === 'ignored'
+      ? globalState.conclusionStep
+      : 'confidence'
+  );
+  const setStep = (next: 'confidence' | 'important' | 'ignored') => {
+    setStepState(next);
+    dispatch({ type: Action.SET_CONCLUSION_STEP, value: next });
+  };
   const selectionRef = React.useRef({ step, importantPoints, ignoredPoints });
   selectionRef.current = { step, importantPoints, ignoredPoints };
-
-  // Initialize charts on load
-  useEffect(() => {
-    initializeCharts(globalState, dispatch);
-    setTimeout(() => updateCharts(globalState, dispatch), 100);
-  }, []);
 
   useEffect(() => {
     const chart = globalState.chart && globalState.chart.shearMoistChart;
@@ -118,6 +119,7 @@ export default function Conclusion() {
   }, [step, globalState.chart]);
 
   const onSurveyClick = () => {
+    dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/survey' });
     history.push('/survey');
   };
 

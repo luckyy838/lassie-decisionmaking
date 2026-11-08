@@ -68,7 +68,7 @@ export default function Main() {
   const { step, userFeedbackState, objectives, objectiveFreeResponse, sampleType,
     robotSuggestions, spatialReward, variableReward, discrepancyReward, acceptOrRejectOptions, acceptOrReject, 
     rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, rejectExplanationRating,
-    resolutionMethod, transition, desiredWaypoint, decisionConfidence, suggestionOverlapNote, hitSuggestion, matchedSuggestionLabel } = currUserStep;
+    resolutionMethod, transition, desiredWaypoint, decisionConfidence, suggestionOverlapNote, hitSuggestion, matchedSuggestionLabel, suggestionsReady } = currUserStep;
 
   const history = useHistory();
 
@@ -101,6 +101,39 @@ export default function Main() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  const resumeSuggestions = React.useRef(false);
+  useEffect(() => {
+    if (resumeSuggestions.current) return;
+    if (userFeedbackState !== UserFeedbackState.DESIRED_WAYPOINT || !desiredWaypoint || suggestionsReady) {
+      return;
+    }
+    resumeSuggestions.current = true;
+    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
+    dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
+    calculateRobotSuggestions(samples, globalState, objectives).then((robotResults) => {
+      const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
+      dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
+      dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: robotResults.overlapNote || "" });
+      dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
+      dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
+      dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
+      dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
+      dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
+      dispatch({ type: Action.SET_USER_SAMPLE, value: null });
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+      dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+      dispatch({ type: Action.SET_SUGGESTIONS_READY, value: true });
+      dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
+    }).catch((err) => {
+      console.log(err);
+      resumeSuggestions.current = false;
+      dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !desiredWaypoint });
+    }).then(() => {
+      dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: false });
+    });
   }, []);
 
   const chosenRewardLineOn = React.useRef(false);
@@ -227,10 +260,24 @@ export default function Main() {
   }, [focusedChart]);
   
   
-  // Initial page set up
+  // Initial page set up. A refresh remounts this page, so clickability has to
+  // follow the restored stage. The old unconditional disable left a restored
+  // plan or sample-selection step unable to accept clicks.
   useEffect(() => {
     console.log({globalState}); // for debugging
-    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
+    const resumingSuggestions = userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT
+      && !!desiredWaypoint
+      && !suggestionsReady;
+    const clicksNeeded = !resumingSuggestions && (
+      userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT
+      || userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION
+    );
+    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: clicksNeeded });
+    if (userFeedbackState === UserFeedbackState.USER_LOCATION_SELECTION) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !userSample });
+    } else if (userFeedbackState === UserFeedbackState.DESIRED_WAYPOINT && !resumingSuggestions) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: !desiredWaypoint });
+    }
     // Make sure charts are ready for decision page
     initializeCharts(globalState, dispatch);
     // Make the charts update on first render
@@ -307,6 +354,7 @@ export default function Main() {
         c.clear();
       });
     }
+    dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/conclusion' });
     history.push('/conclusion');
   };
 
@@ -361,6 +409,10 @@ export default function Main() {
 
     if (userFeedbackState === UserFeedbackState.DECISION_CONFIDENCE) {
       dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: decisionConfidence < 0 });
+    }
+
+    if (userFeedbackState === UserFeedbackState.REJECT_REASON_FREE_RESPONSE) {
+      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: false });
     }
 
   }, [objectives, userFeedbackState, rejectReasons, desiredWaypoint, userSample, decisionConfidence, explanationEnabled]);
@@ -546,7 +598,7 @@ const onObjectiveTextChange = e => {
   const rejectReasonFreeResponseQuestion = 
     <div className="reject-reason-free-response-question" style={{marginBottom: '2vh'}}>
       <p><strong>Please state your reason for rejecting the suggestion:</strong></p>
-      <textarea onChange={onRejectReasonTextChange} rows={5} cols={85}/>
+      <textarea value={rejectReasonFreeResponse || ''} onChange={onRejectReasonTextChange} rows={5} cols={85}/>
     </div>
 
   const userLocationSelectionQuestion = 
@@ -590,7 +642,7 @@ const onObjectiveTextChange = e => {
 
   // Hook for displaying hypothesis popup
   // Apply new changes 6/7/2022 by Zeyu
-  const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
+  const singleTransectNullHypothesis = require('../../assets/Hypothesis_Image.png');
   const [hypothesisOpen, setHypothesisOpen] = useState(false);
   const decisionHypothesisDialog =
     <MultiStepDialog
@@ -600,7 +652,7 @@ const onObjectiveTextChange = e => {
       allowCancel={false}
       steps={[
         [
-          "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see blue line). Spirit is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
+          "Sand moisture should be highest (most wet) in the interdune and lowest (most dry) at the dune crest (see purple line). Spirit is testing the hypothesis that strength will increase as moisture increases until sand is saturated (somewhere along the stoss slope), at which point strength will be constant as moisture continues to increase (see blue line)."
         ]
       ]}
       img={singleTransectNullHypothesis}
@@ -728,6 +780,7 @@ const tutorial4 =
     dispatch({ type: Action.SET_ACCEPT_OR_REJECT, value: -1 });
     dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
     dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+    dispatch({ type: Action.SET_SUGGESTIONS_READY, value: false });
     dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.DESIRED_WAYPOINT });
   };
 
@@ -741,6 +794,8 @@ const tutorial4 =
   const onPrevious = () => {
     if (userFeedbackState === UserFeedbackState.TUTORIAL1) {
       returnToScenarioIntroduction();
+      dispatch({ type: Action.SET_INTRO_PAGE, value: 1 });
+      dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/' });
       history.push('/');
       return;
     }
@@ -824,6 +879,7 @@ const tutorial4 =
           dispatch({ type: Action.SET_USER_SAMPLE, value: null });
           dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
           dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+          dispatch({ type: Action.SET_SUGGESTIONS_READY, value: true });
           dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
         } catch (err) {
           console.log(err);
@@ -977,8 +1033,11 @@ const tutorial4 =
       </div>
   );
 
-  // Popup for displaying instructions on the decision page
-  const [decisionHelpOpen, setDecisionHelpOpen] = useState(true);
+  // This dialog is opened by local state, not by the saved step. Reopen it only
+  // when a refresh lands back on the first tutorial, where it is shown.
+  const [decisionHelpOpen, setDecisionHelpOpen] = useState(
+    () => userFeedbackState === UserFeedbackState.TUTORIAL1
+  );
   const decisionHelpDialog =
     <MultiStepDialog
       open={decisionHelpOpen}

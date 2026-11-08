@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { makeStyles, createTheme, ThemeProvider } from '@material-ui/core/styles';
 import { HashRouter as Router, Route, Switch, Redirect, useHistory, useLocation } from "react-router-dom";
 import { StateProvider, useStateValue, Action } from './state';
@@ -7,14 +7,13 @@ import Intro from './pages/intro';
 import Decision from './pages/decision';
 import Conclusion from './pages/conclusion';
 import Survey from './pages/survey';
-import { SavedProgress } from './pages/savedProgress';
 import { GlobalDialog } from './components/GlobalDialog';
+import Complete from './pages/complete';
 import { logTrace } from './logger';
-import { TraceType, Sample } from './types';
-import { storeState, stateExists, removeStoredState, getStoredState } from './handlers/LocalStorageHandler';
-import { AUTO_LOAD_MS } from './constants';
-import { getMoistureData, getShearData, getMeasurements } from './util';
+import { TraceType } from './types';
+import { getMoistureData, getShearData } from './util';
 import { initialSamplesSet } from './sampleTemplates';
+import { buildProgress, progressSignature, writeProgress } from './progress';
 
 const theme = createTheme({
   palette: {
@@ -66,82 +65,39 @@ function RouteWrapper() {
     });
   }, [history]);
 
-  // Load moisture dataset, shear dataset, and initial samples
+  const savedSignature = useRef('');
+
+  // Dataset is static. Keep samples that were restored from progress.
   useEffect(() => {
-    let moistureData = getMoistureData();
-    let shearData = getShearData(dataVersion.local);
-    let initialSamples = initialSamplesSet[dataVersion.local];
-    dispatch({ type: Action.SET_MOISTURE_DATA, value: moistureData });
-    dispatch({ type: Action.SET_FULL_DATA, value: shearData });
-    dispatch({ type: Action.SET_SAMPLES, value: initialSamples })
-    dispatch({ type: Action.SET_CURR_SAMPLE_IDX, value: 0 });
+    dispatch({ type: Action.SET_MOISTURE_DATA, value: getMoistureData() });
+    dispatch({ type: Action.SET_FULL_DATA, value: getShearData(dataVersion.local) });
+    if (!globalState.samples || globalState.samples.length === 0) {
+      dispatch({ type: Action.SET_SAMPLES, value: initialSamplesSet[dataVersion.local] });
+      dispatch({ type: Action.SET_CURR_SAMPLE_IDX, value: 0 });
+    }
+    dispatch({ type: Action.SET_CHART_SETTINGS, value: { mode: globalState.chartSettings.mode, updateRequired: true } });
+    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
   }, []);
 
-  // When user closes the tab, save the user's progress
   useEffect(() => {
+    const target = globalState.submitted ? '/complete' : (globalState.progressRoute || '/');
+    if (location.pathname !== target) {
+      history.replace(target);
+    }
+  }, []);
 
-    // This is called before tab closes
-    window.addEventListener('beforeunload', (e) => {
-      e.preventDefault();
-      // Execute this if the user is past the intro section and if the full survey hasn't been submitted yet
-      if (location.pathname !== "/" && !globalState.submitted) {
-        let { chart } = globalState;
-        // Clear the chart data because it contains circular references on the "data" and "datasets" properties.
-        // If this data isn't cleared, it causes issues when trying to stringify the globalState in the "storeState"
-        // function below. The chart is cleared in the "dispatch" function in this 'beforeunload' step prior to
-        // storing the globalState in the 'unload' step because the globalState wasn't updating immediately when 
-        // combining the "dispatch" and "storeState" functions together in one step.
-        if (chart) {
-          dispatch({ type: Action.SET_CHART, value: null });
-        }
-      }
-    });
-
-    // This is called when the tab closes
-    window.addEventListener('unload', () => {
-      // Execute this if the user is past the intro section and if the full survey hasn't been submitted yet
-      if (location.pathname !== "/" && !globalState.submitted) {
-        // Store the global state so it can be retrieved again when the user returns to the site 
-        storeState(location.pathname, globalState);
-
-      // If the user is still on the intro section or if the survey has already been submitted, remove the
-      // stored state so that the user starts on a fresh survey form when returning to the site
-      } else if (globalState.submitted) {
-        removeStoredState();
-      }
-    });
+  useEffect(() => {
+    try {
+      const record = buildProgress(globalState);
+      const signature = progressSignature(record);
+      if (signature === savedSignature.current) return;
+      savedSignature.current = signature;
+      writeProgress(record);
+    } catch (err) {}
   });
 
-  // If there is a previously saved state, display a temporary screen asking whether the user wants to continue
-  // the previous session.
-  if (stateExists()) {
-    const data = getStoredState();
-    if (!data) {
-      removeStoredState();
-      history.push("/");
-    } else {
-      const {path, state, date} = data;
-      // If the last save was recent, automatically load that state.
-      if ((Date.now() - date) < AUTO_LOAD_MS) {
-        removeStoredState();
-        dispatch({type: Action.SET_STATE, value: state});
-        history.push(path);
-      }
-    }
-
-    return <SavedProgress
-      onNew={() => {
-        const data = getStoredState();
-        const { robotVersion } = data.state;
-        removeStoredState();
-        history.push("/");
-      }}
-      onContinue={() => {
-        const {path, state} = data;
-        removeStoredState();
-        dispatch({type: Action.SET_STATE, value: state});
-        history.push(path);
-      }}/>
+  if (globalState.submitted && location.pathname !== '/complete') {
+    return <Redirect to="/complete" />;
   }
 
   // Page router - Redirect the user to the intro section if the user has not yet completed it yet
@@ -155,6 +111,7 @@ function RouteWrapper() {
           globalState.introCompleted ? <Conclusion/> : <Redirect to={{ pathname: '/'}}/> )} />
         <Route path="/survey" render={props => (
           globalState.introCompleted ? <Survey/> : <Redirect to={{ pathname: '/'}}/> )} />
+        <Route path="/complete" component={Complete}/>
       </Switch>
       <GlobalDialog />
     </div>

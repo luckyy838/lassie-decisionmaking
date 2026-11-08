@@ -1,6 +1,7 @@
 import {  FormControl, Select, MenuItem, Button } from '@material-ui/core';
 import * as React from 'react';
 import { useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { saveLocalSession } from '../util';
 import { useStateValue, Action } from '../state';
 import RadioButtonGroup from '../components/RadioButtonGroup';
@@ -116,7 +117,7 @@ const continuousImageComponent = (question: SurveyQuestion, depth: number) => {
     )
 }
 //Add dropDown menu by Zeyu 6/16/2022
-const singleTransectNullHypothesis = require('../../assets/SingleTransectNullHypothesisbackup.png');
+const singleTransectNullHypothesis = require('../../assets/Hypothesis_Image.png');
 // const [hypothesisOpen, setHypothesisOpen] = useState(false);
 const decisionHypothesisDialog =
     <MultiStepDialog
@@ -345,22 +346,33 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 }
 
 export default function Survey() {
+    const history = useHistory();
     const [globalState, dispatch] = useStateValue();
     const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled, explanationChoice } = globalState;
     const hypothesisConfidence = globalState.hypothesisConfidence == null ? -1 : globalState.hypothesisConfidence;
     const pages = pagesForSession(explanationEnabled);
-    const [page, setPage] = useState(0);
-    const [answers, setAnswers] = useState({} as SurveyAnswers);
+    const [page, setPageState] = useState(() => {
+        const saved = globalState.surveyPage || 0;
+        return saved >= 0 && saved < pages.length ? saved : 0;
+    });
+    const [answers, setAnswers] = useState((globalState.surveyAnswers || {}) as SurveyAnswers);
+    const [saveError, setSaveError] = useState('');
+    const submitting = React.useRef(false);
+    const setPage = (next: number) => {
+        setPageState(next);
+        dispatch({ type: Action.SET_SURVEY_PAGE, value: next });
+    };
     const setAnswer = (id: string, answer: string) => {
-        const newAnswer = {};
-        newAnswer[id] = answer;
-        setAnswers({...answers, ...newAnswer});
+        const next = {...answers, [id]: answer};
+        setAnswers(next);
+        dispatch({ type: Action.SET_SURVEY_ANSWERS, value: next });
     };
     const firstUnansweredId = idOfFirstUnansweredQuestion(pages[page], answers);
     let questionComponents = buildQuestionComponents(pages[page], answers, setAnswer, firstUnansweredId);
 
-    const saveLogs = surveyOutput => {
+    const saveLogs = (surveyOutput) => {
         const log = {
+            sessionId: globalState.sessionId,
             dataVersion: dataVersion,
             explanationEnabled: explanationEnabled,
             explanationChoice: explanationChoice,
@@ -373,26 +385,27 @@ export default function Survey() {
             userSteps: userSteps,
             surveyResponses: surveyOutput
         };
-        saveLocalSession(log).catch((err) => {
-            console.log('Err', err);
-        });
+        return saveLocalSession(log);
     }
 
-    const onContinueClick = () => {
-        if (page < pages.length - 1) {
-            if (page + 1 === pages.length - 1) {
-                const output = generateSurveyOutput(answers, pages);
-                // Outputs the user's responses to the database
-                saveLogs(output);
-                // Set the "submitted" state property to true so that if the user revisits the website,
-                // the user will start from the begining and will not be shown a continue progress screen
-                dispatch({type: 
-                    Action.SET_SUBMITTED_STATUS, 
-                    value: true
-                });
+    const onContinueClick = async () => {
+        if (submitting.current || page >= pages.length - 1) return;
+        if (page + 1 === pages.length - 1) {
+            submitting.current = true;
+            setSaveError('');
+            try {
+                await saveLogs(generateSurveyOutput(answers, pages));
+                dispatch({ type: Action.SET_SUBMITTED_STATUS, value: true });
+                dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/complete' });
+                history.push('/complete');
+            } catch (err) {
+                console.log('Err', err);
+                setSaveError('Your responses could not be saved. Please try Finish again.');
+                submitting.current = false;
             }
-            setPage(page + 1);
+            return;
         }
+        setPage(page + 1);
     }
 
     const onBackClick = () => { if (page > 0) setPage(page - 1); }
@@ -407,6 +420,7 @@ export default function Survey() {
                     <Button disabled={!allQuestionsAnswered(answers, pages[page])} className="continueButton" color="primary" variant="contained" onClick={onContinueClick}>Finish</Button>
                 </div>
             }
+            {saveError && <p className="text">{saveError}</p>}
             {!(page >= pages.length - 2) &&
                 <div className="buttonRow">
                     <Button disabled={page === 0} className="backButton" color="primary" variant="contained" onClick={onBackClick}>Back</Button>

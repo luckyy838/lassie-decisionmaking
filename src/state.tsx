@@ -3,6 +3,8 @@ import { createContext, useContext, useReducer } from 'react';
 import { DialogProps, DataVersion, CurrUserStepData, UserStepsData, Sample, PreSample } from './types';
 import { objectiveOptions } from './constants';
 import { getShearData, getMoistureData } from './util';
+import { applyProgress, consumeProgressReset, createSessionId, readProgress } from './progress';
+import { initialSamplesSet } from './sampleTemplates';
 
 export type ChartSettings = {
   mode: number,
@@ -79,13 +81,19 @@ export interface IState {
   introCompleted: boolean,
   submitted: boolean,
   explanationEnabled: boolean | null,
-  explanationChoice: 'with' | 'without' | 'random' | null
+  explanationChoice: 'with' | 'without' | 'random' | null,
+  sessionId: string,
+  progressRoute: '/' | '/decision' | '/conclusion' | '/survey' | '/complete',
+  introPage: number,
+  conclusionStep: 'confidence' | 'important' | 'ignored',
+  surveyPage: number,
+  surveyAnswers: { [key: string]: string },
 }
 
 // Default initial state
 export const initialState : IState = {
   dataVersion: {
-    local: Math.round(Math.random()), // load alternative hypothesis 0 or 1 randomly for shear data
+    local: 1, // every participant uses shear1, the dataset that contradicts the hypothesis
   },
   fullData: [],
   moistureData: [],
@@ -125,6 +133,7 @@ export const initialState : IState = {
     suggestionOverlapNote: "",
     hitSuggestion: false,
     matchedSuggestionLabel: null,
+    suggestionsReady: false,
   },
   userSteps: [],
   conclusionFreeResponse: "", //Add by Zeyu 6/13/2022
@@ -158,6 +167,12 @@ export const initialState : IState = {
   submitted: false,
   explanationEnabled: null,
   explanationChoice: null,
+  sessionId: '',
+  progressRoute: '/',
+  introPage: 0,
+  conclusionStep: 'confidence',
+  surveyPage: 0,
+  surveyAnswers: {},
 };
 
 export type IAction = { type: any, value?: any }
@@ -222,6 +237,12 @@ export enum Action {
     SET_SUBMITTED_STATUS, // Executed when user submits final responses
     SET_EXPLANATION_ENABLED,
     SET_EXPLANATION_CHOICE,
+    SET_SUGGESTIONS_READY,
+    SET_PROGRESS_ROUTE,
+    SET_INTRO_PAGE,
+    SET_CONCLUSION_STEP,
+    SET_SURVEY_PAGE,
+    SET_SURVEY_ANSWERS,
     SET_DESIRED_WAYPOINT,
     SET_DECISION_CONFIDENCE,
     SET_SUGGESTION_OVERLAP_NOTE,
@@ -264,6 +285,11 @@ const actionKeyMap : ActionKeyMap = {
   [Action.SET_SUBMITTED_STATUS]: 'submitted',
   [Action.SET_EXPLANATION_ENABLED]: 'explanationEnabled',
   [Action.SET_EXPLANATION_CHOICE]: 'explanationChoice',
+  [Action.SET_PROGRESS_ROUTE]: 'progressRoute',
+  [Action.SET_INTRO_PAGE]: 'introPage',
+  [Action.SET_CONCLUSION_STEP]: 'conclusionStep',
+  [Action.SET_SURVEY_PAGE]: 'surveyPage',
+  [Action.SET_SURVEY_ANSWERS]: 'surveyAnswers',
 };
 
 type SubReducer<T> = (subState: T, state: Readonly<IState>, action: IAction) => T;
@@ -329,6 +355,7 @@ const actionKeyMapCurrUserStep : ActionKeyMapCurrUserStep = {
   [Action.SET_SUGGESTION_OVERLAP_NOTE]: 'suggestionOverlapNote',
   [Action.SET_HIT_SUGGESTION]: 'hitSuggestion',
   [Action.SET_MATCHED_SUGGESTION_LABEL]: 'matchedSuggestionLabel',
+  [Action.SET_SUGGESTIONS_READY]: 'suggestionsReady',
 };
 
 const currUserStepReducer : SubReducer<CurrUserStepData> = (currUserStep, state, action) => {
@@ -410,8 +437,28 @@ type ReducerType = [IState, DispatchType];
 
 const StateContext = createContext<ReducerType>({} as any);
 
+function initState(): IState {
+  consumeProgressReset();
+  const version = initialState.dataVersion.local;
+  const base: IState = {
+    ...initialState,
+    sessionId: createSessionId(),
+    fullData: getShearData(version),
+    moistureData: getMoistureData(),
+    samples: initialSamplesSet[version].map(sample => ({
+      ...sample,
+      moisture: sample.moisture.slice(),
+      shear: sample.shear.slice(),
+    })),
+  };
+  try { window.localStorage.removeItem('Kod-lab-rhex-state'); } catch (err) {}
+  const saved = readProgress();
+  if (!saved) return base;
+  return applyProgress(base, saved);
+}
+
 export const StateProvider = ({ children }) => (
-  <StateContext.Provider value={useReducer(reducer, initialState)}>
+  <StateContext.Provider value={useReducer(reducer, undefined as any, initState)}>
     {children}
   </StateContext.Provider>
 );

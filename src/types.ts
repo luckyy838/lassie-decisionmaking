@@ -86,6 +86,7 @@ export interface CurrUserStepData {
   suggestionOverlapNote: string,
   hitSuggestion: boolean,
   matchedSuggestionLabel: string | null,
+  suggestionsReady: boolean,
 }
 
 /** Interface for the finalized user step details */

@@ -61,7 +61,15 @@ export default function Intro(props) {
     const { initialResolutionMethod } = globalState;
     const returnedToScenario = React.useRef(openOnScenario());
     const assigningExplanation = React.useRef(false);
-    const [currentPage, setCurrentPage] = useState(() => openOnScenario() ? 1 : 0);
+    const [currentPage, setCurrentPage] = useState(() => {
+        if (openOnScenario()) return 1;
+        return globalState.introPage || 0;
+    });
+    React.useEffect(() => {
+        if (globalState.introPage !== currentPage) {
+            dispatch({ type: Action.SET_INTRO_PAGE, value: currentPage });
+        }
+    }, [currentPage]);
     const [animationDirection, setAnimationDirection] = useState("Right");
     const pageCount = 2; // Updated page count to 3
 
@@ -89,7 +97,7 @@ export default function Intro(props) {
     }
 
     const onNextClick = async () => {
-        if (currentPage === 0 && (globalState.explanationEnabled == null || globalState.explanationChoice == null)) {
+        if (currentPage === 0 && globalState.explanationEnabled == null) {
             if (assigningExplanation.current) {
                 return;
             }
@@ -111,6 +119,7 @@ export default function Intro(props) {
                 type: Action.SET_INTRO_STATUS, 
                 value: true
             });
+            dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/decision' });
             history.push("/decision");
         } else {
             setAnimationDirection("Right");

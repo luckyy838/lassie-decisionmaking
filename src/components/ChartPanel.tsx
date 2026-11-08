@@ -47,9 +47,9 @@ export default function ChartPanel(props: ChartPanelProps) {
     }
 
     useEffect(() => {
-        initializeCharts(globalState, dispatch);
-        updateCharts(globalState, dispatch);
-    }, [chartSettings]);
+        const created = initializeCharts(globalState, dispatch);
+        updateCharts({ ...globalState, chart: created || globalState.chart }, dispatch);
+    }, []);
 
 
     const onSaveClick = () => {
