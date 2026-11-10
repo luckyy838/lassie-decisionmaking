@@ -2,8 +2,32 @@ import os
 import sys
 import math
 
+_FLASK_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data_path(env_name, filename):
+    override = os.environ.get(env_name)
+    if override is not None and override.strip() != '':
+        return os.path.abspath(override)
+    return os.path.join(_FLASK_DIR, filename)
+
+
+def _required_env(name):
+    value = os.environ.get(name)
+    if value is None or value.strip() == '':
+        sys.stderr.write('error: environment variable %s is required\n' % name)
+        raise SystemExit(1)
+    return value
+
+
+ADMIN_USER = _required_env('LASSIE_ADMIN_USER')
+ADMIN_PASSWORD = _required_env('LASSIE_ADMIN_PASSWORD')
+_ADMIN_SECRET = _required_env('LASSIE_ADMIN_SECRET').encode('utf-8')
+BALANCE_FILE = _data_path('LASSIE_BALANCE_PATH', 'explanation_balance.json')
+DB_FILE = _data_path('LASSIE_DB_PATH', 'lassie_local.db')
+
 # Frontend util.ts expects the newFlask multi-objective API (final_suggestion, info_gaussian, etc.)
-_NEW_FLASK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'newFlask'))
+_NEW_FLASK_DIR = os.path.abspath(os.path.join(_FLASK_DIR, '..', 'newFlask'))
 if _NEW_FLASK_DIR not in sys.path:
     sys.path.insert(0, _NEW_FLASK_DIR)
 
@@ -11,7 +35,6 @@ from multiObjectiveDecisionMaking.decision_making import *
 from multiObjectiveDecisionMaking.multi_objective_tools import *
 
 from flask import Flask, request, jsonify
-from flask_cors import CORS, cross_origin
 import numpy as np
 import json
 import random
@@ -22,8 +45,8 @@ import hashlib
 import hmac
 
 app = Flask(__name__)
-CORS(app, allow_headers=['Content-Type', 'Authorization'])
-app.config['CORS_HEADERS'] = 'Content-Type'
+# /sessions is unauthenticated. Reject oversized bodies before they are stored.
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 reported_balance_type = {
     0: 'selecting locations that optimizes the objective of increasing information coverage based on data from previously sampled locations',
@@ -89,7 +112,6 @@ def winning_hundred_index(values_100, waypoint):
 
 
 @app.route('/process', methods=['POST'])
-@cross_origin()
 def process():
     inputs = request.get_json(force=True)
     location = np.array(inputs['locations'], dtype=np.int64)
@@ -144,7 +166,6 @@ def process():
     return jsonify(output)
 
 
-BALANCE_FILE = os.path.join(os.path.dirname(__file__), 'explanation_balance.json')
 _balance_lock = threading.Lock()
 
 
@@ -163,7 +184,6 @@ def _read_explanation_balance():
 
 
 @app.route('/assign_explanation', methods=['POST'])
-@cross_origin()
 def assign_explanation():
     inputs = request.get_json(force=True, silent=True) or {}
     forced = inputs.get('forced', None)
@@ -196,7 +216,6 @@ def assign_explanation():
     })
 
 
-DB_FILE = os.path.join(os.path.dirname(__file__), 'lassie_local.db')
 _db_lock = threading.Lock()
 
 
@@ -228,10 +247,6 @@ def init_local_db():
 
 
 init_local_db()
-
-ADMIN_USER = 'admin'
-ADMIN_PASSWORD = 'lassie-admin'
-_ADMIN_SECRET = b'lassie-local-admin'
 
 
 def _make_admin_token():
@@ -286,7 +301,6 @@ def _session_dict(row):
 
 
 @app.route('/admin/login', methods=['POST'])
-@cross_origin()
 def admin_login():
     body = request.get_json(force=True, silent=True) or {}
     user = body.get('username')
@@ -297,7 +311,6 @@ def admin_login():
 
 
 @app.route('/admin/sessions', methods=['GET'])
-@cross_origin()
 def list_sessions():
     denied = _require_admin()
     if denied:
@@ -313,7 +326,6 @@ def list_sessions():
 
 
 @app.route('/admin/sessions/<int:session_id>/delete', methods=['POST'])
-@cross_origin()
 def delete_session(session_id):
     denied = _require_admin()
     if denied:
@@ -330,7 +342,6 @@ def delete_session(session_id):
 
 
 @app.route('/sessions', methods=['POST'])
-@cross_origin()
 def save_session():
     payload = request.get_json(force=True, silent=True)
     if not isinstance(payload, dict):
@@ -379,4 +390,4 @@ def save_session():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False)

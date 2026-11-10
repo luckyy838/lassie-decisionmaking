@@ -2,6 +2,7 @@ node_modules
 dist/*
 .vscode/
 flask/venv/
+.env
 flask/explanation_balance.json
 flask/lassie_local.db
 
