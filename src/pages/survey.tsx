@@ -2,13 +2,12 @@ import {  FormControl, Select, MenuItem, Button } from '@material-ui/core';
 import * as React from 'react';
 import { useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import { saveLocalSession } from '../util';
+import { saveLocalSession, buildSessionLog } from '../util';
 import { useStateValue, Action } from '../state';
 import RadioButtonGroup from '../components/RadioButtonGroup';
 import RadioButtonGroupHorizontal from '../components/RadioButtonGroupHorizontal';
 import RankedScale from '../components/RankedScale';
 import { QuestionType, SurveyPage, SurveyQuestion, surveyPages, TextAreaType } from '../data/surveyQuestions';
-import { decisionConfidenceTexts } from '../constants';
 import '../styles/survey.scss';
 import { MultiStepDialog } from '../components/Dialogs';
 import ReactHtmlParser from 'react-html-parser'
@@ -348,8 +347,7 @@ const idOfFirstUnansweredQuestion = (questionList: SurveyQuestion[], answers: Su
 export default function Survey() {
     const history = useHistory();
     const [globalState, dispatch] = useStateValue();
-    const { dataVersion, conclusionFreeResponse, samples, userSteps, explanationEnabled, explanationChoice } = globalState;
-    const hypothesisConfidence = globalState.hypothesisConfidence == null ? -1 : globalState.hypothesisConfidence;
+    const { explanationEnabled } = globalState;
     const pages = pagesForSession(explanationEnabled);
     const [page, setPageState] = useState(() => {
         const saved = globalState.surveyPage || 0;
@@ -371,21 +369,7 @@ export default function Survey() {
     let questionComponents = buildQuestionComponents(pages[page], answers, setAnswer, firstUnansweredId);
 
     const saveLogs = (surveyOutput) => {
-        const log = {
-            sessionId: globalState.sessionId,
-            dataVersion: dataVersion,
-            explanationEnabled: explanationEnabled,
-            explanationChoice: explanationChoice,
-            conclusionFreeResponse: conclusionFreeResponse,
-            hypothesisConfidence: hypothesisConfidence >= 0 ? decisionConfidenceTexts[hypothesisConfidence] : null,
-            importantPoints: globalState.importantPoints || [],
-            ignoredPoints: globalState.ignoredPoints || [],
-            importantWeighedEqually: !!globalState.importantWeighedEqually,
-            ignoredConsideredEveryPoint: !!globalState.ignoredConsideredEveryPoint,
-            userSteps: userSteps,
-            surveyResponses: surveyOutput
-        };
-        return saveLocalSession(log);
+        return saveLocalSession(buildSessionLog(globalState, 'survey', surveyOutput));
     }
 
     const onContinueClick = async () => {

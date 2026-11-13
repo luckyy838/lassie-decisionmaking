@@ -138,7 +138,7 @@ def process():
         unvisited_idx = np.arange(NUM_WAYPOINTS)
 
     reward_for_opt = reward_vector_22[unvisited_idx]
-    final_type, final_suggestion_sub, suggestion_sets_sub, except_index, pareto_sets, pareto_locs = run_multi_objective_odsf(
+    final_type, final_suggestion_sub, suggestion_sets_sub, except_index, pareto_sets, pareto_locs, selection = run_multi_objective_odsf(
         reward_for_opt, information_level, multi_objective_pattern,
         info_signal, disp_signal, noise_esti,
         k_info_signal=k_info_signal_, k_noise=k_noise_, k_info_low=k_info_low_, k_info_high=k_info_high_,
@@ -151,9 +151,17 @@ def process():
 
     output = {
         'final_type': final_type,
+        'final_level': selection['final_level'],
         'final_suggestion': str(final_suggestion),
         'final_suggestion_index100': str(final_suggestion_index100),
         'suggestion_sets': suggestion_sets.tolist(),
+        'info_reward_raw': selection['info_reward_raw'],
+        'disp_reward_raw': selection['disp_reward_raw'],
+        'info_reward_normalized': selection['info_reward_normalized'],
+        'disp_reward_normalized': selection['disp_reward_normalized'],
+        'information_override': selection['information_override'],
+        'disp_signature': selection['disp_signature'],
+        'discrepancy_signal_level': selection['discrepancy_signal_level'],
         'info_gaussian': info_gaussian.tolist(),
         'disp_gaussian': disp_gaussian.tolist(),
         'information_level': information_level,
@@ -239,6 +247,9 @@ def init_local_db():
         columns = [row[1] for row in conn.execute('PRAGMA table_info(sessions)')]
         if 'session_id' not in columns:
             conn.execute('ALTER TABLE sessions ADD COLUMN session_id TEXT')
+        columns = [row[1] for row in conn.execute('PRAGMA table_info(sessions)')]
+        if 'stage' not in columns:
+            conn.execute('ALTER TABLE sessions ADD COLUMN stage TEXT')
         conn.execute(
             'CREATE UNIQUE INDEX IF NOT EXISTS sessions_session_id_unique ON sessions(session_id)'
         )
@@ -296,6 +307,7 @@ def _session_dict(row):
         'createdAt': row['created_at'],
         'explanationEnabled': None if enabled is None else bool(enabled),
         'explanationChoice': row['explanation_choice'],
+        'stage': row['stage'] if row['stage'] else (payload.get('stage') if isinstance(payload, dict) else None),
         'payload': payload,
     }
 
@@ -319,7 +331,7 @@ def list_sessions():
         conn = sqlite3.connect(DB_FILE)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            'SELECT id, created_at, explanation_enabled, explanation_choice, payload FROM sessions WHERE deleted_at IS NULL ORDER BY id DESC'
+            'SELECT id, created_at, explanation_enabled, explanation_choice, payload, stage FROM sessions WHERE deleted_at IS NULL ORDER BY id DESC'
         ).fetchall()
         conn.close()
     return jsonify({'sessions': [_session_dict(row) for row in rows]})
@@ -355,6 +367,8 @@ def save_session():
     enabled_int = None if enabled is None else (1 if enabled else 0)
     choice = payload.get('explanationChoice')
     choice_text = choice if isinstance(choice, str) else None
+    stage = payload.get('stage')
+    stage_text = stage.strip() if isinstance(stage, str) and stage.strip() else None
     payload_text = json.dumps(payload)
     with _db_lock:
         conn = sqlite3.connect(DB_FILE)
@@ -366,10 +380,10 @@ def save_session():
             conn.execute(
                 '''
                 UPDATE sessions
-                SET explanation_enabled = ?, explanation_choice = ?, payload = ?, deleted_at = NULL
+                SET explanation_enabled = ?, explanation_choice = ?, payload = ?, stage = ?, deleted_at = NULL
                 WHERE session_id = ?
                 ''',
-                (enabled_int, choice_text, payload_text, session_id),
+                (enabled_int, choice_text, payload_text, stage_text, session_id),
             )
             row_id = existing[0]
             created_at = existing[1]
@@ -377,10 +391,10 @@ def save_session():
             cur = conn.execute(
                 '''
                 INSERT INTO sessions
-                    (created_at, explanation_enabled, explanation_choice, payload, session_id)
-                VALUES (?, ?, ?, ?, ?)
+                    (created_at, explanation_enabled, explanation_choice, payload, session_id, stage)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ''',
-                (created_at, enabled_int, choice_text, payload_text, session_id),
+                (created_at, enabled_int, choice_text, payload_text, session_id, stage_text),
             )
             row_id = cur.lastrowid
         conn.commit()

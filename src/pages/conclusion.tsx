@@ -7,6 +7,7 @@ import Grid from '@material-ui/core/Grid';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import { useStateValue, Action, ConclusionPoint } from '../state';
+import { saveLocalSession, buildSessionLog } from '../util';
 import '../styles/conclusion.scss';
 import ChartPanel from '../components/ChartPanel';
 import { decisionConfidenceTexts } from '../constants';
@@ -38,6 +39,8 @@ export default function Conclusion() {
   const importantWeighedEqually = !!globalState.importantWeighedEqually;
   const ignoredConsideredEveryPoint = !!globalState.ignoredConsideredEveryPoint;
   const confidenceMarks = decisionConfidenceTexts.map((label, i) => ({ value: i, label }));
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const [step, setStepState] = useState<'confidence' | 'important' | 'ignored'>(
     globalState.conclusionStep === 'important' || globalState.conclusionStep === 'ignored'
@@ -118,9 +121,18 @@ export default function Conclusion() {
     };
   }, [step, globalState.chart]);
 
-  const onSurveyClick = () => {
-    dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/survey' });
-    history.push('/survey');
+  const onSurveyClick = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await saveLocalSession(buildSessionLog(globalState, 'conclusion', []));
+      dispatch({ type: Action.SET_PROGRESS_ROUTE, value: '/survey' });
+      history.push('/survey');
+    } catch (err) {
+      setSaveError('Your responses could not be saved. Please try Next again.');
+      setSaving(false);
+    }
   };
 
   return (
@@ -249,8 +261,9 @@ export default function Conclusion() {
                 </p>
                 <div className="conclusionNav">
                   <Button variant="contained" color="primary" onClick={() => setStep('important')}>Previous</Button>
-                  <Button variant="contained" color="primary" onClick={onSurveyClick}>Next</Button>
+                  <Button variant="contained" color="primary" disabled={saving} onClick={onSurveyClick}>Next</Button>
                 </div>
+                {saveError ? <p className="text">{saveError}</p> : null}
               </>
             )}
           </div>

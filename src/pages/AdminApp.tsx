@@ -10,6 +10,7 @@ type SessionRecord = {
   createdAt: number;
   explanationEnabled: boolean | null;
   explanationChoice: string | null;
+  stage: string | null;
   payload: any;
 };
 
@@ -307,6 +308,7 @@ export default function AdminApp() {
   const [view, setView] = useState<View>('overview');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [branch, setBranch] = useState<'all' | 'with' | 'without'>('all');
+  const [stageFilter, setStageFilter] = useState<'all' | 'conclusion' | 'survey' | 'earlier'>('all');
   const [formalOnly, setFormalOnly] = useState(false);
 
   const load = (activeToken: string) => {
@@ -353,9 +355,13 @@ export default function AdminApp() {
       if (formalOnly && !isFormal(session)) return false;
       if (branch === 'with' && session.explanationEnabled !== true) return false;
       if (branch === 'without' && session.explanationEnabled !== false) return false;
+      const stage = session.stage || null;
+      if (stageFilter === 'conclusion' && stage !== 'conclusion') return false;
+      if (stageFilter === 'survey' && stage !== 'survey') return false;
+      if (stageFilter === 'earlier' && stage) return false;
       return true;
     });
-  }, [sessions, branch, formalOnly]);
+  }, [sessions, branch, formalOnly, stageFilter]);
 
   const selected = sessions.find((session) => session.id === selectedId) || null;
 
@@ -364,14 +370,32 @@ export default function AdminApp() {
     setView('detail');
   };
 
-  const downloadSession = (session: SessionRecord) => {
-    const blob = new Blob([JSON.stringify(session.payload, null, 2)], { type: 'application/json' });
+  const downloadJson = (filename: string, body: unknown) => {
+    const blob = new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `session-${session.id}.json`;
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadSession = (session: SessionRecord) => {
+    downloadJson(`session-${session.id}.json`, session.payload);
+  };
+
+  const exportAll = () => {
+    downloadJson('lassie-sessions.json', {
+      exportedAt: new Date().toISOString(),
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        createdAt: session.createdAt,
+        stage: session.stage || null,
+        explanationEnabled: session.explanationEnabled,
+        explanationChoice: session.explanationChoice,
+        payload: session.payload,
+      })),
+    });
   };
 
   const deleteSession = (session: SessionRecord) => {
@@ -447,10 +471,20 @@ export default function AdminApp() {
             <option value="without">Without explanation</option>
           </select>
         </label>
+        <label>
+          Stage
+          <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as any)}>
+            <option value="all">All</option>
+            <option value="conclusion">Conclusion</option>
+            <option value="survey">Survey</option>
+            <option value="earlier">Earlier records</option>
+          </select>
+        </label>
         <label className="adminCheck">
           <input type="checkbox" checked={formalOnly} onChange={(e) => setFormalOnly(e.target.checked)} />
           Assigned sessions only
         </label>
+        <button type="button" onClick={exportAll}>Export all</button>
         <span>{filtered.length} shown / {sessions.length} saved</span>
       </div>
       {loadError ? <p className="adminError">{loadError}</p> : null}
@@ -515,6 +549,7 @@ export default function AdminApp() {
               <tr>
                 <th>Time</th>
                 <th>Branch</th>
+                <th>Stage</th>
                 <th>Source</th>
                 <th>Samples</th>
                 <th>Followed</th>
@@ -531,6 +566,7 @@ export default function AdminApp() {
                   <tr key={session.id} onClick={() => openSession(session.id)}>
                     <td>{formatTime(session.createdAt)}</td>
                     <td>{branchLabel(session)}</td>
+                    <td>{session.stage || '—'}</td>
                     <td>{isFormal(session) ? 'Assigned' : 'Manual test'}</td>
                     <td>{points.samples}</td>
                     <td>{followedCount(points)}/{points.samples}</td>
@@ -553,7 +589,7 @@ export default function AdminApp() {
         <section className="adminDetail">
           <p><button onClick={() => setView('list')}>Back to list</button></p>
           <h2>Session {selected.id}</h2>
-          <p>{formatTime(selected.createdAt)} · {branchLabel(selected)} · {isFormal(selected) ? 'Assigned' : 'Manual test (' + selected.explanationChoice + ')'}</p>
+          <p>{formatTime(selected.createdAt)} · {branchLabel(selected)} · {selected.stage || '—'} · {isFormal(selected) ? 'Assigned' : 'Manual test (' + selected.explanationChoice + ')'}</p>
           <p>Samples: {sampleCount(selected)} · Data version: {dataVersionLabel(selected)}</p>
           <div className="adminTrees adminTreesSingle">
             <DecisionTreeCard title={branchLabel(selected)} bucket={selectedPoints} />

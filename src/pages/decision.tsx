@@ -68,7 +68,8 @@ export default function Main() {
   const { step, userFeedbackState, objectives, objectiveFreeResponse, sampleType,
     robotSuggestions, spatialReward, variableReward, discrepancyReward, acceptOrRejectOptions, acceptOrReject, 
     rejectReasonOptions, rejectReason, rejectReasons, rejectReasonsOptions, rejectReasonFreeResponse, userFreeSelection, userSample, rejectExplanationRating,
-    resolutionMethod, transition, desiredWaypoint, decisionConfidence, suggestionOverlapNote, hitSuggestion, matchedSuggestionLabel, suggestionsReady } = currUserStep;
+    resolutionMethod, transition, desiredWaypoint, decisionConfidence, suggestionOverlapNote, hitSuggestion, matchedSuggestionLabel, suggestionsReady,
+    infoGaussian, dispGaussian, strategySuggestions } = currUserStep;
 
   const history = useHistory();
 
@@ -103,6 +104,24 @@ export default function Main() {
     };
   }, []);
 
+  const applyRobotResults = (robotResults) => {
+    dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: robotResults.results });
+    dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: robotResults.overlapNote || "" });
+    dispatch({ type: Action.SET_SPATIAL_REWARD, value: robotResults.spatialReward });
+    dispatch({ type: Action.SET_VARIABLE_REWARD, value: robotResults.variableReward });
+    dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: robotResults.discrepancyReward });
+    dispatch({ type: Action.SET_INFO_GAUSSIAN, value: robotResults.infoGaussian || [] });
+    dispatch({ type: Action.SET_DISP_GAUSSIAN, value: robotResults.dispGaussian || [] });
+    dispatch({ type: Action.SET_STRATEGY_SUGGESTIONS, value: robotResults.strategySuggestions || [] });
+    dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
+    dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
+    dispatch({ type: Action.SET_USER_SAMPLE, value: null });
+    dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
+    dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
+    dispatch({ type: Action.SET_SUGGESTIONS_READY, value: true });
+    dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
+  };
+
   const resumeSuggestions = React.useRef(false);
   useEffect(() => {
     if (resumeSuggestions.current) return;
@@ -113,19 +132,7 @@ export default function Main() {
     dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: false });
     dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
     calculateRobotSuggestions(samples, globalState, objectives).then((robotResults) => {
-      const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
-      dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
-      dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: robotResults.overlapNote || "" });
-      dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
-      dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
-      dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
-      dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
-      dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: { updateRequired: true } });
-      dispatch({ type: Action.SET_USER_SAMPLE, value: null });
-      dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-      dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-      dispatch({ type: Action.SET_SUGGESTIONS_READY, value: true });
-      dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
+      applyRobotResults(robotResults);
     }).catch((err) => {
       console.log(err);
       resumeSuggestions.current = false;
@@ -189,6 +196,9 @@ export default function Main() {
     unstable_batchedUpdates(() => {
       dispatch({ type: Action.SET_SPATIAL_REWARD, value: [] });
       dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: [] });
+      dispatch({ type: Action.SET_INFO_GAUSSIAN, value: [] });
+      dispatch({ type: Action.SET_DISP_GAUSSIAN, value: [] });
+      dispatch({ type: Action.SET_STRATEGY_SUGGESTIONS, value: [] });
       dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: [] });
       dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: false });
       dispatch({ type: Action.SET_DESIRED_WAYPOINT, value: null });
@@ -329,6 +339,9 @@ export default function Main() {
       spatialReward: spatialReward,
       variableReward: variableReward,
       discrepancyReward: discrepancyReward,
+      infoGaussian: Array.isArray(infoGaussian) ? infoGaussian.slice() : [],
+      dispGaussian: Array.isArray(dispGaussian) ? dispGaussian.slice() : [],
+      strategySuggestions: JSON.parse(JSON.stringify(strategySuggestions || [])),
       desiredWaypoint: desiredWaypoint,
       decisionConfidence: decisionConfidence >= 0 ? decisionConfidenceTexts[decisionConfidence] : null,
       suggestionOverlapNote: suggestionOverlapNote,
@@ -777,6 +790,9 @@ const tutorial4 =
     dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
     dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
     dispatch({ type: Action.SET_SUGGESTIONS_READY, value: false });
+    dispatch({ type: Action.SET_INFO_GAUSSIAN, value: [] });
+    dispatch({ type: Action.SET_DISP_GAUSSIAN, value: [] });
+    dispatch({ type: Action.SET_STRATEGY_SUGGESTIONS, value: [] });
     dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.DESIRED_WAYPOINT });
   };
 
@@ -864,19 +880,7 @@ const tutorial4 =
         dispatch({ type: Action.SET_LOADING_ROBOT_SUGGESTIONS, value: true });
         try {
           let robotResults = await calculateRobotSuggestions(samples, globalState, objectives);
-          const { results, spatialReward, variableReward, discrepancyReward } = robotResults;
-          dispatch({ type: Action.SET_ROBOT_SUGGESTIONS, value: results });
-          dispatch({ type: Action.SET_SUGGESTION_OVERLAP_NOTE, value: robotResults.overlapNote || "" });
-          dispatch({ type: Action.SET_SPATIAL_REWARD, value: spatialReward });
-          dispatch({ type: Action.SET_VARIABLE_REWARD, value: variableReward });
-          dispatch({ type: Action.SET_DISCREPANCY_REWARD, value: discrepancyReward });
-          dispatch({ type: Action.SET_SHOW_ROBOT_SUGGESTIONS, value: true });
-          dispatch({ type: Action.SET_EXPLANATION_CHART_SETTINGS, value: {updateRequired: true}});
-          dispatch({ type: Action.SET_USER_SAMPLE, value: null });
-          dispatch({ type: Action.SET_DISABLE_SUBMIT_BUTTON, value: true });
-          dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });
-          dispatch({ type: Action.SET_SUGGESTIONS_READY, value: true });
-          dispatch({ type: Action.SET_USER_FEEDBACK_STATE, value: UserFeedbackState.USER_LOCATION_SELECTION });
+          applyRobotResults(robotResults);
         } catch (err) {
           console.log(err);
           dispatch({ type: Action.SET_IMG_CLICK_ENABLED, value: true });

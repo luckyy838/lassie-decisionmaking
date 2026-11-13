@@ -95,7 +95,7 @@ def process():
     #     index += chunk_size
 
     # print("Reward vector from process.py", reward_vector)
-    final_type, final_suggestion_index, suggestion_sets_index, except_index, pareto_sets, pareto_locs = run_multi_objective_odsf(
+    final_type, final_suggestion_index, suggestion_sets_index, except_index, pareto_sets, pareto_locs, _selection = run_multi_objective_odsf(
                     reward_vector_100, information_level, multi_objective_pattern, 
                     info_signal, disp_signal, noise_esti, k_info_signal=k_info_signal_, k_noise=k_noise_, k_info_low = k_info_low_, k_info_high = k_info_high_)
     

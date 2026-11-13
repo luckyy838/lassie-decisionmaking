@@ -69,6 +69,9 @@ export interface CurrUserStepData {
   spatialReward: number[],
   variableReward: number[],
   discrepancyReward: number[],
+  infoGaussian: number[],
+  dispGaussian: number[],
+  strategySuggestions: StrategySuggestionRecord[],
   acceptOrRejectOptions: string[],
   acceptOrReject: number, // stores which robot suggestion the user accepts (or if the user rejects) at each step
   rejectReasonOptions: string[],
@@ -96,6 +99,9 @@ export interface UserStepsData {
   objectiveFreeResponse: string | null, 
   sampleType: 'robot' | 'user' | null,
   robotSuggestions: PreSample[] | null, 
+  infoGaussian: number[],
+  dispGaussian: number[],
+  strategySuggestions: StrategySuggestionRecord[],
   acceptOrReject: string | null, 
   acceptedRobotSuggestion: Sample | null,
   rejectReason: string | null, 
@@ -127,6 +133,29 @@ export interface Sample {
   isHovered: boolean,
   moisture: number[],
   shear: number[],
+}
+
+/** One weighting strategy from a single /process call. Numbers are the backend's, not recomputed. */
+export interface StrategySuggestionRecord {
+  methodIndex: number,
+  methodLabel: string,
+  objectiveRepre: number,
+  finalType: number | null,
+  finalLevel: number | null,
+  waypointIndex: number | null,
+  index100: number | null,
+  infoRewardRaw: number | null,
+  dispRewardRaw: number | null,
+  infoRewardNormalized: number | null,
+  dispRewardNormalized: number | null,
+  suggestionSets: number[],
+  informationLevel: number | null,
+  dispSignature: number | null,
+  discrepancySignalLevel: number | null,
+  informationOverride: 'information_low' | 'information_high' | null,
+  shown: boolean,
+  displayLabel: string | null,
+  hiddenReason: 'visited' | 'overlap' | null,
 }
 
 /** Interface for the samples collected */

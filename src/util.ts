@@ -1,9 +1,9 @@
 import * as _ from 'lodash';
 import { NORMALIZED_WIDTH, RowType, sampleLocations, NUM_OF_LOCATIONS, objectiveOptions,
-  MOISTURE_BINS, NUM_MEASUREMENTS, MAX_NUM_OF_MEASUREMENTS, resolutionMethodShortNames } from './constants';
+  MOISTURE_BINS, NUM_MEASUREMENTS, MAX_NUM_OF_MEASUREMENTS, resolutionMethodShortNames, decisionConfidenceTexts } from './constants';
 import { measurements } from './measurements';
 import { dataset } from './data/rhexDataset';
-import { Sample, PreSample, Objective } from './types';
+import { Sample, PreSample, Objective, StrategySuggestionRecord } from './types';
 import { IState } from './state';
 
 
@@ -302,6 +302,37 @@ export function saveLocalSession(log: object): Promise<void> {
   }).then(() => undefined);
 }
 
+/** Payload stored at the end of the conclusion and again when the survey is submitted. */
+export function buildSessionLog(globalState: IState, stage: 'conclusion' | 'survey', surveyResponses: any[]) {
+  const hypothesisConfidence = globalState.hypothesisConfidence == null ? -1 : globalState.hypothesisConfidence;
+  return {
+    sessionId: globalState.sessionId,
+    stage: stage,
+    dataVersion: globalState.dataVersion,
+    explanationEnabled: globalState.explanationEnabled,
+    explanationChoice: globalState.explanationChoice,
+    conclusionFreeResponse: globalState.conclusionFreeResponse,
+    hypothesisConfidence: hypothesisConfidence >= 0 ? decisionConfidenceTexts[hypothesisConfidence] : null,
+    importantPoints: globalState.importantPoints || [],
+    ignoredPoints: globalState.ignoredPoints || [],
+    importantWeighedEqually: !!globalState.importantWeighedEqually,
+    ignoredConsideredEveryPoint: !!globalState.ignoredConsideredEveryPoint,
+    userSteps: globalState.userSteps,
+    surveyResponses: surveyResponses || [],
+  };
+}
+
+function asNumber(value: any): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return isNaN(n) ? null : n;
+}
+
+function asNumberList(value: any): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(asNumber).filter((item): item is number => item != null);
+}
+
 function objectiveRepre(primaryIsCoverage: boolean, methodIndex: number): number {
   if (primaryIsCoverage) {
     if (methodIndex === 0) return 0;
@@ -351,12 +382,12 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
   const userMethod = globalState.currUserStep.resolutionMethod || 0;
   const methodOrder = [userMethod, (userMethod + 1) % 3, (userMethod + 2) % 3];
 
-  const flaskByMethod: { methodIndex: number, data: any }[] = [];
+  const flaskByMethod: { methodIndex: number, repre: number, data: any }[] = [];
   for (let i = 0; i < methodOrder.length; i++) {
     const methodIndex = methodOrder[i];
     const repre = objectiveRepre(primaryIsCoverage, methodIndex);
     const data: any = await flaskCalculations(locations, measurements, moistureValues, shearValues, repre);
-    flaskByMethod.push({ methodIndex, data });
+    flaskByMethod.push({ methodIndex, repre, data });
   }
 
   const userFlask = flaskByMethod[0].data;
@@ -407,8 +438,56 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
 
   const overlapNote = buildOverlapNote(indexToMethods);
   const final_suggestion100: number[] = [Number(userFlask.final_suggestion_index100)];
+  const infoGaussian = Array.isArray(userFlask.info_gaussian) ? userFlask.info_gaussian.slice() : [];
+  const dispGaussian = Array.isArray(userFlask.disp_gaussian) ? userFlask.disp_gaussian.slice() : [];
 
-  console.log({locations, measurements, moistureValues, shearValues, results, overlapNote});
+  const strategySuggestions: StrategySuggestionRecord[] = flaskByMethod.map(({ methodIndex, repre, data }) => {
+    const loc = Number(data.final_suggestion);
+    const valid = !isNaN(loc) && loc >= 0 && loc < sampleLocations.length;
+    const visited = valid && locations.indexOf(loc) !== -1;
+    const visibleIndex = valid ? results.findIndex(r => r.index === loc) : -1;
+    const visible = visibleIndex >= 0 ? results[visibleIndex] : null;
+    const isPrimary = !!(visible && visible.methodIndexes && visible.methodIndexes[0] === methodIndex);
+    const letter = visibleIndex >= 0 ? String.fromCharCode(65 + visibleIndex) : null;
+    let shown = false;
+    let displayLabel: string | null = null;
+    let hiddenReason: 'visited' | 'overlap' | null = null;
+    if (visited) {
+      hiddenReason = 'visited';
+    } else if (visible && isPrimary) {
+      shown = true;
+      displayLabel = letter;
+    } else if (visible) {
+      hiddenReason = 'overlap';
+      displayLabel = letter;
+    }
+    const override = data.information_override === 'information_low' || data.information_override === 'information_high'
+      ? data.information_override
+      : null;
+    return {
+      methodIndex: methodIndex,
+      methodLabel: resolutionMethodShortNames[methodIndex],
+      objectiveRepre: repre,
+      finalType: asNumber(data.final_type),
+      finalLevel: asNumber(data.final_level),
+      waypointIndex: valid ? loc : null,
+      index100: asNumber(data.final_suggestion_index100),
+      infoRewardRaw: asNumber(data.info_reward_raw),
+      dispRewardRaw: asNumber(data.disp_reward_raw),
+      infoRewardNormalized: asNumber(data.info_reward_normalized),
+      dispRewardNormalized: asNumber(data.disp_reward_normalized),
+      suggestionSets: asNumberList(data.suggestion_sets),
+      informationLevel: asNumber(data.information_level),
+      dispSignature: asNumber(data.disp_signature),
+      discrepancySignalLevel: asNumber(data.discrepancy_signal_level),
+      informationOverride: override,
+      shown: shown,
+      displayLabel: displayLabel,
+      hiddenReason: hiddenReason,
+    };
+  });
+
+  console.log({locations, measurements, moistureValues, shearValues, results, overlapNote, strategySuggestions});
 
   return {
     results: results,
@@ -416,7 +495,10 @@ export async function calculateRobotSuggestions(samples: Sample[], globalState: 
     index100: final_suggestion100,
     spatialReward: spatial_reward,
     variableReward: variable_reward,
-    discrepancyReward: discrepancy_reward
+    discrepancyReward: discrepancy_reward,
+    infoGaussian: infoGaussian,
+    dispGaussian: dispGaussian,
+    strategySuggestions: strategySuggestions,
   };
 }
 

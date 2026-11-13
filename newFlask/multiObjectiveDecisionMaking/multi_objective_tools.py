@@ -55,6 +55,17 @@ def calculate_info_signal_level(info_level, k_info_signal):
     return info_signal_level
 
 
+def _finite_float(value):
+    """JSON-safe scalar. Non-numeric and non-finite values become None."""
+    try:
+        number = float(np.ravel(np.array(value, dtype=float))[0])
+    except (TypeError, ValueError, IndexError):
+        return None
+    if not np.isfinite(number):
+        return None
+    return number
+
+
 def sigmoid(x):
     """Applies the sigmoid function to x"""
     return 1 / (1 + np.exp(-x))
@@ -169,17 +180,25 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
     suggestion_sets = np.array([info_focused_location, info_hier_location, trade_off_location, disp_hier_location, disp_focused_suggestion])
     # print(info_level)
     # applied final infor level decision
+    # final_level is the value before it is snapped to 0, 0.25, 0.5, 0.75, or 1.
+    # The two coverage overrides never compute that value.
+    final_level = None
+    information_override = None
+    discrepancy_signal_level = None
     if(info_level < k_info_low):
         final_type = 0
         except_list = 0
         final_suggestion = info_focused_location
+        information_override = 'information_low'
     elif(info_level > k_info_high):
         except_list = 3
         final_type = 1
         final_suggestion = disp_focused_suggestion
+        information_override = 'information_high'
     else:
         # Implementation goes here
         discrepancy_singal_level = calculate_disp_signal_level(disp_signature, noise_level, k_noise)
+        discrepancy_signal_level = discrepancy_singal_level
         info_signal_level = calculate_info_signal_level(info_signature, k_info_signal)
         # print('dssss', discrepancy_singal_level)
         if(discrepancy_singal_level > 0):
@@ -202,12 +221,32 @@ def run_multi_objective_odsf(vector, info_level, human_reported_type,
             shift_level = 0.25
         else:
             shift_level = 0
-        final_level = shift_level + human_reported_type
+        reported_type = _finite_float(human_reported_type)
+        final_level = shift_level + (0.0 if reported_type is None else reported_type)
         ref_level = np.array([0, 0.25, 0.5, 0.75, 1.0])
         final_type = ref_level[np.argmin(np.abs(np.array(ref_level) - final_level))]
         final_suggestion = suggestion_sets[int(final_type * 4)]
         #final_suggestion = np.unique(suggestion_sets)
-    return final_type, final_suggestion, suggestion_sets, except_list, pareto_sets, pareto_sets_loc
+
+    chosen = int(final_suggestion)
+    raw_info = raw_disp = norm_info = norm_disp = None
+    if 0 <= chosen < len(vector):
+        raw_info = vector[chosen, 0]
+        raw_disp = vector[chosen, 1]
+        norm_info = normalized_vector[chosen, 0]
+        norm_disp = normalized_vector[chosen, 1]
+    selection = {
+        'final_level': _finite_float(final_level),
+        'information_override': information_override,
+        'info_reward_raw': _finite_float(raw_info),
+        'disp_reward_raw': _finite_float(raw_disp),
+        'info_reward_normalized': _finite_float(norm_info),
+        'disp_reward_normalized': _finite_float(norm_disp),
+        'information_level': _finite_float(info_level),
+        'disp_signature': _finite_float(disp_signature),
+        'discrepancy_signal_level': _finite_float(discrepancy_signal_level),
+    }
+    return final_type, final_suggestion, suggestion_sets, except_list, pareto_sets, pareto_sets_loc, selection
         
 
 
